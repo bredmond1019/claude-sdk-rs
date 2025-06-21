@@ -38,7 +38,7 @@ num_cpus = "1.16"
 libc = "0.2"
 
 # Core optional dependencies
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"], optional = true }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"], optional = true }
 
 # MCP dependencies (optional)
 tokio-util = { version = "0.7", features = ["codec"], optional = true }

@@ -187,7 +187,7 @@ impl SystemInfo {
     fn get_os_info() -> String {
         #[cfg(target_os = "macos")]
         {
-            get_macos_version()
+            Self::get_macos_version()
         }
         #[cfg(target_os = "linux")]
         {

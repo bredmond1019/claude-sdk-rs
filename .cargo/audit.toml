@@ -1,0 +1,5 @@
+[advisories]
+# Acknowledge the rsa vulnerability until a fix is available
+# This is a timing side-channel in the rsa crate used by sqlx-mysql
+# We don't use MySQL features, so this doesn't affect us
+ignore = ["RUSTSEC-2023-0071"]

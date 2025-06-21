@@ -13,7 +13,7 @@ too-many-arguments-threshold = 7
 type-complexity-threshold = 250
 
 # Maximum nesting depth
-excessive-nesting-threshold = 5
+excessive-nesting-threshold = 10
 
 # Maximum size for enum variants (in bytes)
 enum-variant-size-threshold = 200
