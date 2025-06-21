@@ -5,6 +5,130 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-06-21
+
+### 🛡️ Security Enhancement Release
+
+This release significantly improves the security validation system to reduce false positives while maintaining protection against malicious input.
+
+### ✨ New Features
+
+#### Configurable Security Validation Levels
+- **`SecurityLevel` enum**: Four distinct security levels for different use cases
+  - `Strict`: Blocks most special characters (highest security)
+  - `Balanced`: Context-aware validation (default, recommended)
+  - `Relaxed`: Only blocks obvious attack patterns 
+  - `Disabled`: No input validation (use with extreme caution)
+- **Builder pattern support**: Set security level via `Client::builder().security_level(level)`
+- **Per-client configuration**: Different security levels for different client instances
+
+#### Context-Aware Validation (Balanced Mode)
+- **Smart pattern detection**: Distinguishes legitimate use from actual attacks
+- **Markdown support**: Allows backticks for code formatting (e.g., `"How do I use \`backticks\` in markdown?"`)
+- **File operations**: Permits common file operations (e.g., `"create project-design-doc.md"`)
+- **Git commands**: Allows legitimate git operations (e.g., `"git commit -m 'Initial commit'"`)
+- **Safe redirection**: Context-aware detection of dangerous vs. safe command patterns
+
+### 🔧 Improved Security Patterns
+
+#### Enhanced Detection Logic
+- **Command injection protection**: Improved detection of `$(...)`, `${...}`, `&&`, `||` patterns
+- **Dangerous command detection**: Smart detection of risky commands after `;` and `|`
+- **Multi-pattern analysis**: Requires multiple suspicious indicators before blocking
+- **Reduced false positives**: Significantly fewer legitimate queries incorrectly flagged
+
+#### Backwards Compatibility
+- **Default behavior preserved**: `Balanced` mode is now default, maintaining security while reducing false positives
+- **Existing API unchanged**: All existing client code continues to work without modification
+- **Gradual adoption**: Users can opt into stricter or more relaxed modes as needed
+
+### 🧪 Testing Improvements
+
+#### Comprehensive Test Coverage
+- **Security level testing**: Tests for all four security levels with representative queries
+- **Edge case validation**: Specific tests for previously problematic patterns
+- **Regression prevention**: Tests ensure the original issue (`"create project-design-doc.md"`) is resolved
+- **Attack pattern verification**: Confirms malicious patterns are still properly blocked
+
+### 📚 Documentation Updates
+
+#### Enhanced README
+- **Security section expansion**: Detailed explanation of security levels and their use cases
+- **Configuration examples**: Practical examples showing how to configure different security levels
+- **Migration guidance**: Clear guidance on when to use each security level
+- **Security best practices**: Recommendations for different deployment scenarios
+
+### 🔧 Technical Details
+
+#### API Additions
+```rust
+// New security level enum
+pub enum SecurityLevel {
+    Strict,    // Blocks most special characters
+    Balanced,  // Context-aware validation (default)
+    Relaxed,   // Only obvious attacks
+    Disabled,  // No validation
+}
+
+// New configuration methods
+Config::builder().security_level(SecurityLevel::Balanced)
+Client::builder().security_level(SecurityLevel::Relaxed)
+
+// New validation function
+validate_query_with_security_level(query, SecurityLevel::Balanced)
+```
+
+#### Internal Improvements
+- **Modular validation logic**: Separate functions for different security levels
+- **Optimized pattern matching**: Early returns for obviously safe patterns
+- **Memory efficiency**: Reduced string allocations in validation logic
+
+### 🛠️ Migration Guide
+
+#### For Existing Users
+- **No action required**: Default behavior is now more permissive while maintaining security
+- **Custom security needs**: Users requiring stricter validation can opt into `SecurityLevel::Strict`
+- **Trusted environments**: Users in controlled environments can use `SecurityLevel::Relaxed`
+
+#### Configuration Examples
+```rust
+// For production with untrusted input
+let client = Client::builder()
+    .security_level(SecurityLevel::Strict)
+    .build();
+
+// For development and general use (default)
+let client = Client::builder()
+    .security_level(SecurityLevel::Balanced)
+    .build();
+
+// For trusted internal tools
+let client = Client::builder()
+    .security_level(SecurityLevel::Relaxed)
+    .build();
+```
+
+### 🔒 Security Impact
+
+#### Resolved Issues
+- **False positive reduction**: Legitimate queries like `"create project-design-doc.md"` now work by default
+- **Improved usability**: Better balance between security and functionality
+- **Maintained protection**: All actual attack patterns continue to be blocked effectively
+
+#### Security Matrix
+| Pattern Type | Strict | Balanced | Relaxed | Disabled |
+|--------------|--------|----------|---------|----------|
+| `create file.md` | ❌ | ✅ | ✅ | ✅ |
+| Backticks in markdown | ❌ | ✅ | ✅ | ✅ |
+| `$(rm -rf /)` | ❌ | ❌ | ❌ | ✅ |
+| `<script>alert()` | ❌ | ❌ | ❌ | ✅ |
+| `'; DROP TABLE` | ❌ | ❌ | ❌ | ✅ |
+
+### 🚀 Performance
+- **Validation optimization**: Faster validation with early returns for safe patterns
+- **Reduced overhead**: More efficient string operations in validation logic
+- **Memory improvements**: Less temporary string allocation during validation
+
 ## [1.0.0] - 2025-06-19
 
 ### 🎉 Initial Stable Release

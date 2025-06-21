@@ -36,7 +36,7 @@ A type-safe, async-first Rust SDK that wraps the [Claude Code CLI](https://claud
 - **⚙️ Flexible Configuration** - Builder patterns for intuitive setup
 - **🔐 Granular Permissions** - Fine-grained tool access control with `Bash(command)` and MCP support
 - **🎯 Conversation Control** - Limit turns and extend system prompts dynamically
-- **🛡️ Security Features** - Configurable permission prompts and tool restrictions
+- **🛡️ Advanced Security** - Configurable validation levels and permission controls
 
 ## 📦 Installation
 
@@ -177,7 +177,7 @@ let client = Client::builder()
 The SDK now supports advanced configuration features for better control:
 
 ```rust
-use claude_sdk_rs::{Client, ToolPermission};
+use claude_sdk_rs::{Client, ToolPermission, SecurityLevel};
 
 // Configure with system prompt extension and tool permissions
 let client = Client::builder()
@@ -188,6 +188,7 @@ let client = Client::builder()
         "mcp__dangerous__delete".to_string(), // Block MCP tools
     ])
     .skip_permissions(false)  // Require permission prompts
+    .security_level(SecurityLevel::Balanced)  // Configure input validation
     .build();
 
 // Tool-specific permissions
@@ -199,6 +200,40 @@ let tools_client = Client::builder()
     ])
     .build();
 ```
+
+### Security Validation Levels
+
+The SDK provides configurable security validation to balance usability with protection:
+
+```rust
+use claude_sdk_rs::{Client, SecurityLevel};
+
+// Strict mode - blocks most special characters (high security)
+let strict_client = Client::builder()
+    .security_level(SecurityLevel::Strict)
+    .build();
+
+// Balanced mode - context-aware validation (default, recommended)
+let balanced_client = Client::builder()
+    .security_level(SecurityLevel::Balanced)  // Allows "create file.md"
+    .build();
+
+// Relaxed mode - only blocks obvious attacks (for trusted environments)
+let relaxed_client = Client::builder()
+    .security_level(SecurityLevel::Relaxed)
+    .build();
+
+// Disabled - no input validation (use with extreme caution)
+let unsafe_client = Client::builder()
+    .security_level(SecurityLevel::Disabled)
+    .build();
+```
+
+**Security Level Guide:**
+- **`Strict`**: Blocks most special characters, safest for untrusted input
+- **`Balanced`**: Smart context-aware validation, allows legitimate queries like "create project-design-doc.md"
+- **`Relaxed`**: Only blocks obvious attack patterns, good for controlled environments
+- **`Disabled`**: No validation, only use in completely trusted scenarios
 
 ### Get Full Response Metadata
 
@@ -379,10 +414,19 @@ The SDK is designed for minimal overhead:
 
 ## 🔒 Security
 
-- Never logs sensitive data or API responses
-- Secure process execution with proper isolation
-- Input validation and sanitization
-- See [SECURITY.md](SECURITY.md) for security policy
+- **🛡️ Configurable Input Validation**: Four security levels from strict to disabled
+- **🔐 Context-Aware Filtering**: Smart detection distinguishes legitimate queries from attacks
+- **🚫 Command Injection Protection**: Advanced pattern detection for shell commands
+- **🔒 Process Isolation**: Secure execution with proper sandboxing
+- **🤐 Data Privacy**: Never logs sensitive data or API responses
+- **⚙️ Granular Permissions**: Fine-grained tool access controls
+- See [SECURITY.md](SECURITY.md) for complete security policy
+
+### Security Features:
+- **Balanced Validation (Default)**: Allows `"create project-design-doc.md"` while blocking `"$(rm -rf /)"`
+- **Attack Pattern Detection**: Recognizes script injection, SQL injection, and command substitution
+- **Legitimate Use Support**: Context-aware validation for markdown, Git commands, and file operations
+- **Tool Restrictions**: Block specific bash commands or MCP tools individually
 
 ## 📋 Requirements
 
