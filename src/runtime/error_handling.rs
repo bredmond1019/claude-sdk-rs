@@ -163,21 +163,31 @@ impl SystemInfo {
         None
     }
 
+    #[cfg(target_os = "macos")]
+    fn get_macos_version() -> String {
+        let Ok(output) = std::process::Command::new("sw_vers")
+            .arg("-productVersion")
+            .output()
+        else {
+            return "macOS".to_string();
+        };
+        
+        if !output.status.success() {
+            return "macOS".to_string();
+        }
+        
+        if let Ok(version) = String::from_utf8(output.stdout) {
+            format!("macOS {}", version.trim())
+        } else {
+            "macOS".to_string()
+        }
+    }
+
     /// Get OS information string
     fn get_os_info() -> String {
         #[cfg(target_os = "macos")]
         {
-            if let Ok(output) = std::process::Command::new("sw_vers")
-                .arg("-productVersion")
-                .output()
-            {
-                if output.status.success() {
-                    if let Ok(version) = String::from_utf8(output.stdout) {
-                        return format!("macOS {}", version.trim());
-                    }
-                }
-            }
-            "macOS".to_string()
+            get_macos_version()
         }
         #[cfg(target_os = "linux")]
         {
@@ -396,6 +406,30 @@ impl ProcessErrorDetails {
         suggestions.join("\n")
     }
 
+    /// Get a masked environment variable value
+    fn get_masked_env_var(var: &str) -> Option<(String, String)> {
+        let value = std::env::var(var).ok()?;
+        
+        let masked_value = Self::mask_sensitive_value(var, &value);
+        Some((var.to_string(), masked_value))
+    }
+    
+    /// Mask sensitive values in environment variables
+    fn mask_sensitive_value(var: &str, value: &str) -> String {
+        if var.contains("KEY") || var.contains("TOKEN") || var.contains("PASSWORD") {
+            if value.len() > 8 {
+                format!("{}***", &value[..4])
+            } else {
+                "***".to_string()
+            }
+        } else if var == "PATH" && value.len() > 200 {
+            // Truncate very long PATH variables
+            format!("{}...[truncated]", &value[..200])
+        } else {
+            value.to_string()
+        }
+    }
+
     /// Collect environment variables that might be relevant for debugging
     fn collect_relevant_env() -> Vec<(String, String)> {
         let relevant_vars = [
@@ -416,26 +450,7 @@ impl ProcessErrorDetails {
 
         relevant_vars
             .iter()
-            .filter_map(|var| {
-                std::env::var(var).ok().map(|value| {
-                    // Mask sensitive values
-                    let masked_value =
-                        if var.contains("KEY") || var.contains("TOKEN") || var.contains("PASSWORD")
-                        {
-                            if value.len() > 8 {
-                                format!("{}***", &value[..4])
-                            } else {
-                                "***".to_string()
-                            }
-                        } else if *var == "PATH" && value.len() > 200 {
-                            // Truncate very long PATH variables
-                            format!("{}...[truncated]", &value[..200])
-                        } else {
-                            value
-                        };
-                    (var.to_string(), masked_value)
-                })
-            })
+            .filter_map(|var| Self::get_masked_env_var(var))
             .collect()
     }
 

@@ -6,16 +6,59 @@ use std::sync::Arc;
 
 /// Helper function to extract text from an assistant message
 fn extract_text_from_message(msg: &serde_json::Value, result: &mut String) {
-    if let Some(message) = msg.get("message") {
-        if let Some(content_array) = message.get("content").and_then(|v| v.as_array()) {
-            for content_item in content_array {
-                if content_item.get("type").and_then(|v| v.as_str()) == Some("text") {
-                    if let Some(text) = content_item.get("text").and_then(|v| v.as_str()) {
-                        result.push_str(text);
-                    }
-                }
-            }
-        }
+    let Some(message) = msg.get("message") else {
+        return;
+    };
+    
+    let Some(content_array) = message.get("content").and_then(|v| v.as_array()) else {
+        return;
+    };
+    
+    for content_item in content_array {
+        extract_text_from_content_item(content_item, result);
+    }
+}
+
+/// Helper function to extract text from a content item
+fn extract_text_from_content_item(content_item: &serde_json::Value, result: &mut String) {
+    if content_item.get("type").and_then(|v| v.as_str()) != Some("text") {
+        return;
+    }
+    
+    if let Some(text) = content_item.get("text").and_then(|v| v.as_str()) {
+        result.push_str(text);
+    }
+}
+
+/// Parse stream JSON output from Claude CLI
+fn parse_stream_json_output(output: &str) -> Result<ClaudeResponse> {
+    let mut result = String::new();
+    let mut all_json = Vec::new();
+
+    for line in output.lines() {
+        process_stream_json_line(line, &mut all_json, &mut result);
+    }
+
+    // Return the response with all JSON messages as an array
+    let raw_json = serde_json::Value::Array(all_json);
+    Ok(ClaudeResponse::with_json(result, raw_json))
+}
+
+/// Process a single line of stream JSON output
+fn process_stream_json_line(line: &str, all_json: &mut Vec<serde_json::Value>, result: &mut String) {
+    if line.trim().is_empty() {
+        return;
+    }
+    
+    let Ok(msg) = serde_json::from_str::<serde_json::Value>(line) else {
+        return;
+    };
+    
+    all_json.push(msg.clone());
+    
+    // Check if it's an assistant message and extract text
+    if msg.get("type").and_then(|v| v.as_str()) == Some("assistant") {
+        extract_text_from_message(&msg, result);
     }
 }
 
@@ -168,28 +211,7 @@ impl Client {
                 ))
             }
             StreamFormat::StreamJson => {
-                // For stream-json, we need to parse multiple JSON lines
-                let mut result = String::new();
-                let mut all_json = Vec::new();
-
-                for line in output.lines() {
-                    if line.trim().is_empty() {
-                        continue;
-                    }
-                    // Try to parse as a message
-                    if let Ok(msg) = serde_json::from_str::<serde_json::Value>(line) {
-                        all_json.push(msg.clone());
-
-                        // Check if it's an assistant message and extract text
-                        if msg.get("type").and_then(|v| v.as_str()) == Some("assistant") {
-                            extract_text_from_message(&msg, &mut result);
-                        }
-                    }
-                }
-
-                // Return the response with all JSON messages as an array
-                let raw_json = serde_json::Value::Array(all_json);
-                Ok(ClaudeResponse::with_json(result, raw_json))
+                parse_stream_json_output(&output)
             }
         }
     }
