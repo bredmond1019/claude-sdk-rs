@@ -127,9 +127,10 @@ async fn main() -> Result<(), claude_sdk_rs::Error> {
 
 ## 📚 Documentation
 
+- **[📦 Rust Crate](https://crates.io/crates/claude-sdk-rs)** - View on crates.io
+- **[📖 Rust Docs](https://docs.rs/claude-sdk-rs)** - Complete API reference
 - **[🚀 Quick Start Guide](QUICK_START.md)** - Get up and running in minutes
 - **[🔧 Development Setup](DEV_SETUP.md)** - Build from source and contribute
-- **[📖 API Documentation](https://docs.rs/claude-sdk-rs)** - Complete API reference
 - **[📂 Examples](examples/)** - Working code examples
 - **[🏗️ Architecture](CLAUDE.md)** - Technical design and internals
 - **[🔄 NVM Compatibility](docs/NVM_COMPATIBILITY.md)** - Using with Node Version Manager
