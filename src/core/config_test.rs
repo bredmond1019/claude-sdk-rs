@@ -417,6 +417,7 @@ mod config_cloning_tests {
 #[cfg(test)]
 mod config_edge_cases {
     use super::*;
+    use crate::core::{SecurityLevel, validate_query_with_security_level};
 
     #[test]
     fn test_config_with_none_values() {
@@ -436,6 +437,7 @@ mod config_edge_cases {
             disallowed_tools: None,
             max_turns: None,
             skip_permissions: true,
+            security_level: SecurityLevel::default(),
         };
 
         assert_eq!(config.model, None);
@@ -485,6 +487,54 @@ mod config_edge_cases {
 
         assert!(!config2.verbose);
         assert!(config2.non_interactive);
+    }
+
+    #[test]
+    fn test_security_levels() {
+        // Test queries
+        let safe_query = "What is the capital of France?";
+        let markdown_query = "How do I use `backticks` in markdown?";
+        let command_query = "Run ls -la && pwd";
+        let script_query = "<script>alert('test')</script>";
+        
+        // Strict mode - blocks most special characters
+        assert!(validate_query_with_security_level(safe_query, SecurityLevel::Strict).is_ok());
+        assert!(validate_query_with_security_level(markdown_query, SecurityLevel::Strict).is_err());
+        assert!(validate_query_with_security_level(command_query, SecurityLevel::Strict).is_err());
+        assert!(validate_query_with_security_level(script_query, SecurityLevel::Strict).is_err());
+        
+        // Balanced mode - context-aware
+        assert!(validate_query_with_security_level(safe_query, SecurityLevel::Balanced).is_ok());
+        assert!(validate_query_with_security_level(markdown_query, SecurityLevel::Balanced).is_ok());
+        assert!(validate_query_with_security_level(command_query, SecurityLevel::Balanced).is_err());
+        assert!(validate_query_with_security_level(script_query, SecurityLevel::Balanced).is_err());
+        
+        // Relaxed mode - only obvious attacks
+        assert!(validate_query_with_security_level(safe_query, SecurityLevel::Relaxed).is_ok());
+        assert!(validate_query_with_security_level(markdown_query, SecurityLevel::Relaxed).is_ok());
+        assert!(validate_query_with_security_level(command_query, SecurityLevel::Relaxed).is_ok());
+        assert!(validate_query_with_security_level(script_query, SecurityLevel::Relaxed).is_err());
+        
+        // Disabled mode - allows everything
+        assert!(validate_query_with_security_level(safe_query, SecurityLevel::Disabled).is_ok());
+        assert!(validate_query_with_security_level(markdown_query, SecurityLevel::Disabled).is_ok());
+        assert!(validate_query_with_security_level(command_query, SecurityLevel::Disabled).is_ok());
+        assert!(validate_query_with_security_level(script_query, SecurityLevel::Disabled).is_ok());
+    }
+
+    #[test]
+    fn test_balanced_mode_specific_cases() {
+        // Test that "create project-design-doc.md" now passes in balanced mode
+        assert!(validate_query_with_security_level("create project-design-doc.md", SecurityLevel::Balanced).is_ok());
+        
+        // Test other legitimate queries
+        assert!(validate_query_with_security_level("The price is $100", SecurityLevel::Balanced).is_ok());
+        assert!(validate_query_with_security_level("Email: user@example.com", SecurityLevel::Balanced).is_ok());
+        assert!(validate_query_with_security_level("git commit -m 'Initial commit'", SecurityLevel::Balanced).is_ok());
+        
+        // Test that actual malicious patterns still fail
+        assert!(validate_query_with_security_level("$(rm -rf /)", SecurityLevel::Balanced).is_err());
+        assert!(validate_query_with_security_level("'; DROP TABLE users;--", SecurityLevel::Balanced).is_err());
     }
 }
 

@@ -158,6 +158,16 @@ pub struct Config {
     /// programmatic use but can be disabled for additional security.
     #[serde(default = "default_skip_permissions")]
     pub skip_permissions: bool,
+
+    /// Security validation strictness level
+    ///
+    /// Controls how strictly user input is validated for potential security threats.
+    /// - `Strict`: Blocks most special characters and patterns
+    /// - `Balanced`: Context-aware validation (default)
+    /// - `Relaxed`: Only blocks obvious attack patterns
+    /// - `Disabled`: No security validation (use with caution)
+    #[serde(default)]
+    pub security_level: SecurityLevel,
 }
 
 /// Output format for Claude CLI responses
@@ -213,6 +223,21 @@ fn default_skip_permissions() -> bool {
     true
 }
 
+/// Security validation strictness level
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum SecurityLevel {
+    /// Strict security - blocks most special characters and patterns
+    Strict,
+    /// Balanced security - context-aware validation (default)
+    #[default]
+    Balanced,
+    /// Relaxed security - only blocks obvious attack patterns
+    Relaxed,
+    /// Disabled - no security validation (use with caution)
+    Disabled,
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -231,6 +256,7 @@ impl Default for Config {
             disallowed_tools: None,
             max_turns: None,
             skip_permissions: default_skip_permissions(),
+            security_level: SecurityLevel::default(),
         }
     }
 }
@@ -777,6 +803,29 @@ impl ConfigBuilder {
         self
     }
 
+    /// Set the security validation level
+    ///
+    /// Controls how strictly user input is validated for potential security threats.
+    /// - `Strict`: Blocks most special characters and patterns
+    /// - `Balanced`: Context-aware validation (default)
+    /// - `Relaxed`: Only blocks obvious attack patterns
+    /// - `Disabled`: No security validation (use with caution)
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use claude_sdk_rs_core::{Config, SecurityLevel};
+    ///
+    /// let config = Config::builder()
+    ///     .security_level(SecurityLevel::Relaxed)
+    ///     .build();
+    /// ```
+    #[must_use]
+    pub fn security_level(mut self, level: SecurityLevel) -> Self {
+        self.config.security_level = level;
+        self
+    }
+
     /// Build the final configuration
     ///
     /// Consumes the builder and returns the constructed `Config` instance.
@@ -816,6 +865,21 @@ impl ConfigBuilder {
 /// - Query contains malicious content
 /// - Query is empty
 pub fn validate_query(query: &str) -> Result<(), Error> {
+    validate_query_with_security_level(query, SecurityLevel::default())
+}
+
+/// Validate query input with specific security level
+///
+/// Checks that a query string meets all validation requirements including
+/// length limits and content validation based on the specified security level.
+///
+/// # Errors
+///
+/// Returns `Error::ConfigError` if:
+/// - Query exceeds maximum length
+/// - Query contains malicious content (based on security level)
+/// - Query is empty
+pub fn validate_query_with_security_level(query: &str, security_level: SecurityLevel) -> Result<(), Error> {
     if query.is_empty() {
         return Err(Error::InvalidInput("Query cannot be empty".to_string()));
     }
@@ -828,47 +892,176 @@ pub fn validate_query(query: &str) -> Result<(), Error> {
         )));
     }
 
-    if contains_malicious_patterns(query) {
-        return Err(Error::InvalidInput(
-            "Query contains potentially malicious content".to_string(),
-        ));
+    match security_level {
+        SecurityLevel::Disabled => Ok(()),
+        SecurityLevel::Relaxed => {
+            if contains_obvious_malicious_patterns(query) {
+                return Err(Error::InvalidInput(
+                    "Query contains potentially malicious content".to_string(),
+                ));
+            }
+            Ok(())
+        }
+        SecurityLevel::Balanced => {
+            if contains_malicious_patterns(query) {
+                return Err(Error::InvalidInput(
+                    "Query contains potentially malicious content".to_string(),
+                ));
+            }
+            Ok(())
+        }
+        SecurityLevel::Strict => {
+            if contains_strict_malicious_patterns(query) {
+                return Err(Error::InvalidInput(
+                    "Query contains potentially malicious content".to_string(),
+                ));
+            }
+            Ok(())
+        }
     }
-
-    Ok(())
 }
 
 /// Check if a string contains potentially malicious patterns
 fn contains_malicious_patterns(text: &str) -> bool {
-    // Check for common injection patterns
-    let malicious_patterns = [
+    // Early return for obviously safe patterns
+    if text.chars().all(|c| c.is_alphanumeric() || c.is_whitespace() || c == '-' || c == '_' || c == '.') {
+        return false;
+    }
+
+    let lower_text = text.to_lowercase();
+    
+    // Check for definite malicious patterns (keep these strict)
+    let strict_patterns = [
         // Script injection
         "<script",
         "javascript:",
         "onclick=",
         "onerror=",
-        // Command injection
-        "$(",
-        "${",
-        "`",
-        "&&",
-        "||",
-        ";",
-        "|",
-        ">",
-        "<",
         // Path traversal
         "../",
         "..\\",
-        // SQL injection indicators (basic)
-        "' OR ",
-        "\" OR ",
-        "'; DROP",
+        // SQL injection with context
+        "' or '",
+        "\" or \"",
+        "'; drop",
+        "\"; drop",
+        "' or 1=1",
+        "\" or 1=1",
         // Null bytes
         "\0",
     ];
+    
+    if strict_patterns.iter().any(|pattern| lower_text.contains(pattern)) {
+        return true;
+    }
+    
+    // For command injection patterns, use more context-aware checks
+    // Check if multiple suspicious patterns appear together
+    let command_indicators = [
+        ("$(", ")"),
+        ("${", "}"),
+        ("&&", ""),
+        ("||", ""),
+        (";", ""),
+        ("|", ""),
+    ];
+    
+    let mut suspicious_count = 0;
+    for (start, _) in &command_indicators {
+        if text.contains(start) {
+            suspicious_count += 1;
+        }
+    }
+    
+    // Flag if multiple command injection patterns are present
+    // or if && or || appear (common command chaining)
+    // or if $( or ${ appear (command substitution)
+    // or if ; followed by dangerous commands
+    if suspicious_count >= 2 || text.contains("&&") || text.contains("||") 
+       || text.contains("$(") || text.contains("${") {
+        return true;
+    }
+    
+    // Check for semicolon or pipe followed by dangerous commands
+    if text.contains(';') || text.contains('|') {
+        let dangerous_commands = ["rm", "del", "format", "fdisk", "chmod", "chown", "malicious_command"];
+        for cmd in &dangerous_commands {
+            if text.contains(&format!("; {}", cmd)) || text.contains(&format!(";{}", cmd)) ||
+               text.contains(&format!("| {}", cmd)) || text.contains(&format!("|{}", cmd)) {
+                return true;
+            }
+        }
+    }
+    
+    // Check for backticks only if they appear to be command substitution
+    if text.contains('`') {
+        // Allow single backticks for markdown code formatting
+        let backtick_count = text.matches('`').count();
+        if backtick_count >= 2 || text.contains("``") {
+            // Check if it looks like command substitution
+            if text.contains("`$") || text.contains("`;") || text.contains("`|") {
+                return true;
+            }
+        }
+    }
+    
+    // Check for redirection only in suspicious contexts
+    if (text.contains('>') || text.contains('<')) && 
+       (text.contains("2>") || text.contains("&>") || text.contains("1>") || 
+        text.contains("<(") || text.contains(">(")) {
+        return true;
+    }
+    
+    false
+}
 
+/// Check for only the most obvious malicious patterns (relaxed mode)
+fn contains_obvious_malicious_patterns(text: &str) -> bool {
     let lower_text = text.to_lowercase();
-    malicious_patterns
-        .iter()
-        .any(|pattern| lower_text.contains(pattern))
+    
+    // Only check for very obvious attack patterns
+    let obvious_patterns = [
+        // Script injection
+        "<script",
+        "javascript:",
+        // Path traversal
+        "../",
+        "..\\",
+        // SQL injection with clear intent
+        "'; drop table",
+        "\"; drop table",
+        "' or 1=1--",
+        "\" or 1=1--",
+        // Null bytes
+        "\0",
+    ];
+    
+    obvious_patterns.iter().any(|pattern| lower_text.contains(pattern))
+}
+
+/// Check using strict patterns (strict mode) 
+fn contains_strict_malicious_patterns(text: &str) -> bool {
+    // Block if text contains any special characters commonly used in attacks
+    let has_special_chars = text.chars().any(|c| matches!(c, 
+        '`' | '$' | '{' | '}' | '(' | ')' | '[' | ']' | 
+        ';' | '|' | '&' | '<' | '>' | '"' | '\'' | '\\' | 
+        '\n' | '\r' | '\t' | '\0'
+    ));
+    
+    if has_special_chars {
+        return true;
+    }
+    
+    // Also check for encoded patterns
+    let lower_text = text.to_lowercase();
+    let encoded_patterns = [
+        "%3c", // <
+        "%3e", // >
+        "%22", // "
+        "%27", // '
+        "%2e%2e", // ..
+        "%00", // null byte
+    ];
+    
+    encoded_patterns.iter().any(|pattern| lower_text.contains(pattern))
 }

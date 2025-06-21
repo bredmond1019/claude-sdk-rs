@@ -1,5 +1,5 @@
 use crate::core::{
-    validate_query, ClaudeCliResponse, ClaudeResponse, Config, Result, SessionId, StreamFormat,
+    validate_query_with_security_level, ClaudeCliResponse, ClaudeResponse, Config, Result, SessionId, StreamFormat,
 };
 use crate::runtime::{process::execute_claude, stream::MessageStream};
 use std::sync::Arc;
@@ -155,7 +155,7 @@ impl Client {
     /// # }
     /// ```
     pub async fn send(&self, query: &str) -> Result<String> {
-        validate_query(query)?;
+        validate_query_with_security_level(query, self.config.security_level)?;
         let response = self.send_full(query).await?;
         Ok(response.content)
     }
@@ -194,7 +194,7 @@ impl Client {
     /// # }
     /// ```
     pub async fn send_full(&self, query: &str) -> Result<ClaudeResponse> {
-        validate_query(query)?;
+        validate_query_with_security_level(query, self.config.security_level)?;
         let output = execute_claude(&self.config, query).await?;
 
         // Parse response based on format
@@ -458,6 +458,24 @@ impl ClientBuilder {
     /// ```
     pub fn max_turns(mut self, turns: u32) -> Self {
         self.config.max_turns = Some(turns);
+        self
+    }
+
+    /// Set the security validation level
+    ///
+    /// Controls how strictly user input is validated for potential security threats.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// # use claude_sdk_rs_runtime::Client;
+    /// # use crate::core::SecurityLevel;
+    /// let client = Client::builder()
+    ///     .security_level(SecurityLevel::Relaxed)  // Allow more flexible input
+    ///     .build();
+    /// ```
+    pub fn security_level(mut self, level: crate::core::SecurityLevel) -> Self {
+        self.config.security_level = level;
         self
     }
 
