@@ -1,0 +1,128 @@
+# Pre-commit hooks for claude-ai project
+# Install with: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # Rust formatting
+  - repo: local
+    hooks:
+      - id: rust-fmt
+        name: Rust Format Check
+        entry: cargo fmt --all -- --check
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+  # Rust linting
+  - repo: local
+    hooks:
+      - id: rust-clippy
+        name: Rust Clippy
+        entry: cargo clippy --workspace --all-targets --all-features -- -D warnings
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+  # Cargo check
+  - repo: local
+    hooks:
+      - id: cargo-check
+        name: Cargo Check
+        entry: cargo check --workspace --all-features
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+  # Test runner
+  - repo: local
+    hooks:
+      - id: cargo-test
+        name: Cargo Test
+        entry: cargo test --workspace
+        language: system
+        types: [rust]
+        pass_filenames: false
+        stages: [push]
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.38.0
+    hooks:
+      - id: markdownlint
+        args: ['--fix']
+
+  # YAML formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0
+    hooks:
+      - id: prettier
+        types_or: [yaml, yml]
+        args: ['--write']
+
+  # Security checks
+  - repo: local
+    hooks:
+      - id: cargo-audit
+        name: Cargo Security Audit
+        entry: cargo audit
+        language: system
+        pass_filenames: false
+        stages: [push]
+
+  # License header check (optional)
+  - repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.5.4
+    hooks:
+      - id: insert-license
+        files: \.rs$
+        args:
+          - --license-filepath
+          - LICENSE-HEADER.txt
+          - --comment-style
+          - //
+        exclude: ^(target/|examples/|tests/)
+
+  # Commit message format
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.13.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+# Configuration for specific hooks
+default_language_version:
+  python: python3
+
+default_stages: [commit]
+
+fail_fast: false
+
+# Exclude patterns
+exclude: |
+  (?x)^(
+    target/|
+    \.git/|
+    \.idea/|
+    \.vscode/|
+    Cargo\.lock|
+    .*\.orig$
+  )
+
+# ci skip conditions
+ci:
+  skip: [cargo-test, cargo-audit]

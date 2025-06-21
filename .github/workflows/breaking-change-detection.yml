@@ -1,0 +1,269 @@
+name: Breaking Change Detection
+
+on:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'claude-ai*/**/*.rs'
+      - 'claude-ai*/Cargo.toml'
+      - 'Cargo.toml'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  semver-check:
+    name: Check for Breaking Changes
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Need full history for comparison
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+    
+    - name: Cache Cargo dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+    
+    - name: Install cargo-semver-checks
+      run: |
+        # Check if already installed and up to date
+        if ! command -v cargo-semver-checks &> /dev/null; then
+          echo "Installing cargo-semver-checks..."
+          cargo install cargo-semver-checks
+        else
+          echo "cargo-semver-checks already installed"
+          cargo semver-checks --version
+        fi
+    
+    - name: Get base branch for comparison
+      id: base-branch
+      run: |
+        # Get the base branch (main or master)
+        BASE_BRANCH="${{ github.base_ref }}"
+        echo "base_branch=$BASE_BRANCH" >> $GITHUB_OUTPUT
+        echo "Using base branch: $BASE_BRANCH"
+    
+    - name: Check for breaking changes in publishable crates
+      run: |
+        echo "🔍 Checking for breaking changes..."
+        
+        # List of publishable crates (excluding examples)
+        CRATES=("claude-ai-core" "claude-ai-mcp" "claude-ai-runtime" "claude-ai" "claude-ai-interactive")
+        
+        # Track if any breaking changes are found
+        BREAKING_CHANGES=false
+        
+        # Create summary report
+        echo "# 🔍 Breaking Change Detection Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Checked crates for breaking changes against \`${{ steps.base-branch.outputs.base_branch }}\` branch:" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        for crate in "${CRATES[@]}"; do
+          echo "🔍 Checking $crate for breaking changes..."
+          
+          if [ -d "$crate" ]; then
+            # Check if this crate exists in the base branch
+            if git show ${{ steps.base-branch.outputs.base_branch }}:$crate/Cargo.toml > /dev/null 2>&1; then
+              echo "  📦 Running cargo-semver-checks for $crate..."
+              
+              # Run semver-checks and capture output
+              if cargo semver-checks check-release --package "$crate" --verbose 2>&1 | tee "/tmp/${crate}_semver.log"; then
+                echo "  ✅ No breaking changes detected in $crate"
+                echo "- ✅ **$crate**: No breaking changes" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "  ❌ Breaking changes detected in $crate!"
+                echo "- ❌ **$crate**: Breaking changes detected" >> $GITHUB_STEP_SUMMARY
+                BREAKING_CHANGES=true
+                
+                # Add details to summary
+                echo "  <details>" >> $GITHUB_STEP_SUMMARY
+                echo "  <summary>View breaking changes in $crate</summary>" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "  \`\`\`" >> $GITHUB_STEP_SUMMARY
+                cat "/tmp/${crate}_semver.log" >> $GITHUB_STEP_SUMMARY
+                echo "  \`\`\`" >> $GITHUB_STEP_SUMMARY
+                echo "  </details>" >> $GITHUB_STEP_SUMMARY
+              fi
+            else
+              echo "  ℹ️  $crate is new (not in base branch)"
+              echo "- 🆕 **$crate**: New crate (not in base branch)" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "  ⚠️  Directory $crate not found"
+            echo "- ⚠️ **$crate**: Directory not found" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo ""
+        done
+        
+        # Add guidance to summary
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ "$BREAKING_CHANGES" = true ]; then
+          echo "## ❌ Breaking Changes Detected" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Breaking changes were detected in one or more crates. This means:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- 🚨 **Major version bump required** (e.g., 1.x.x → 2.0.0)" >> $GITHUB_STEP_SUMMARY
+          echo "- 📝 **Migration guide needed** for affected APIs" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔄 **Deprecation period required** before removal" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review the breaking changes above" >> $GITHUB_STEP_SUMMARY
+          echo "2. Consider if the changes can be made backward compatible" >> $GITHUB_STEP_SUMMARY
+          echo "3. If breaking changes are necessary:" >> $GITHUB_STEP_SUMMARY
+          echo "   - Create a migration guide" >> $GITHUB_STEP_SUMMARY
+          echo "   - Update the major version number" >> $GITHUB_STEP_SUMMARY
+          echo "   - Follow the deprecation policy" >> $GITHUB_STEP_SUMMARY
+          echo "4. Re-run this check after making changes" >> $GITHUB_STEP_SUMMARY
+          
+          # Set job as failed
+          exit 1
+        else
+          echo "## ✅ No Breaking Changes" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All checks passed! This PR can be safely merged without breaking backward compatibility." >> $GITHUB_STEP_SUMMARY
+        fi
+    
+    - name: Comment on PR (if breaking changes)
+      if: failure()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Read the step summary (if available)
+          let summary = "⚠️ **Breaking changes detected!**\n\n";
+          summary += "This PR contains changes that would break backward compatibility. ";
+          summary += "Please review the breaking change detection results in the workflow logs.\n\n";
+          summary += "**Next steps:**\n";
+          summary += "1. Check if changes can be made backward compatible\n";
+          summary += "2. If breaking changes are necessary, plan for a major version release\n";
+          summary += "3. Create migration documentation for affected APIs\n\n";
+          summary += "See the [API Evolution Guidelines](../blob/main/API_EVOLUTION_GUIDELINES.md) for more information.";
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });
+
+  api-compatibility:
+    name: API Compatibility Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache Cargo dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-compat-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-compat-
+    
+    - name: Run API compatibility tests
+      run: |
+        echo "🧪 Running API compatibility tests..."
+        
+        # Run our custom compatibility tests
+        cd claude-ai
+        if cargo test api_compatibility_simple --lib --verbose; then
+          echo "✅ API compatibility tests passed"
+          echo "## ✅ API Compatibility Tests Passed" >> $GITHUB_STEP_SUMMARY
+          echo "All API compatibility tests passed successfully." >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ API compatibility tests failed"
+          echo "## ❌ API Compatibility Tests Failed" >> $GITHUB_STEP_SUMMARY
+          echo "Some API compatibility tests failed. This indicates potential breaking changes in the API surface." >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+    
+    - name: Run compilation tests
+      run: |
+        echo "🔨 Running compilation tests..."
+        
+        # Test that all examples still compile
+        cd examples
+        if cargo check --all-targets; then
+          echo "✅ All examples compile successfully"
+          echo "## ✅ Example Compilation" >> $GITHUB_STEP_SUMMARY
+          echo "All examples compile without errors." >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Example compilation failed"
+          echo "## ❌ Example Compilation Failed" >> $GITHUB_STEP_SUMMARY
+          echo "Some examples failed to compile, indicating potential breaking changes." >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+
+  version-consistency:
+    name: Version Consistency Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Check version consistency
+      run: |
+        echo "🔍 Checking version consistency across workspace..."
+        
+        # Make version tools script executable
+        chmod +x scripts/version-tools.sh
+        
+        # Run version validation
+        if ./scripts/version-tools.sh validate; then
+          echo "✅ Version consistency check passed"
+          echo "## ✅ Version Consistency" >> $GITHUB_STEP_SUMMARY
+          echo "All crate versions are consistent across the workspace." >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Version consistency check failed"
+          echo "## ❌ Version Consistency Failed" >> $GITHUB_STEP_SUMMARY
+          echo "Version inconsistencies detected across workspace crates." >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+    
+    - name: Validate semantic version format
+      run: |
+        echo "🔍 Validating semantic version format..."
+        
+        WORKSPACE_VERSION=$(grep '^version = ' Cargo.toml | head -n1 | cut -d'"' -f2)
+        echo "Current workspace version: $WORKSPACE_VERSION"
+        
+        # Check if version follows semantic versioning
+        if echo "$WORKSPACE_VERSION" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$'; then
+          echo "✅ Version format is valid: $WORKSPACE_VERSION"
+          echo "Current version: \`$WORKSPACE_VERSION\` ✅" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Invalid semantic version format: $WORKSPACE_VERSION"
+          echo "Current version: \`$WORKSPACE_VERSION\` ❌" >> $GITHUB_STEP_SUMMARY
+          echo "Version must follow semantic versioning (X.Y.Z or X.Y.Z-prerelease)" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi

@@ -1,0 +1,164 @@
+name: Changelog Generation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  changelog:
+    name: Generate Changelog
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for changelog generation
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Configure Git
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+
+    - name: Install git-cliff
+      run: |
+        wget -O git-cliff.tar.gz https://github.com/orhun/git-cliff/releases/latest/download/git-cliff-x86_64-unknown-linux-gnu.tar.gz
+        tar -xzf git-cliff.tar.gz
+        sudo mv git-cliff /usr/local/bin/
+        rm git-cliff.tar.gz
+
+    - name: Generate changelog
+      run: |
+        # Generate changelog using git-cliff
+        git-cliff --config cliff.toml --output CHANGELOG.md
+        
+        # Check if there are changes
+        if git diff --quiet CHANGELOG.md; then
+          echo "No changelog updates needed"
+          echo "CHANGELOG_UPDATED=false" >> $GITHUB_ENV
+        else
+          echo "Changelog updated"
+          echo "CHANGELOG_UPDATED=true" >> $GITHUB_ENV
+        fi
+
+    - name: Commit changelog
+      if: env.CHANGELOG_UPDATED == 'true'
+      run: |
+        git add CHANGELOG.md
+        git commit -m "chore: update changelog [skip ci]"
+        git push
+
+  # Validate PR labels for changelog
+  validate-labels:
+    name: Validate PR Labels
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Check PR labels
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const labels = context.payload.pull_request.labels.map(l => l.name);
+          const validTypes = [
+            'breaking', 'feat', 'fix', 'docs', 'style', 
+            'refactor', 'perf', 'test', 'build', 'ci', 
+            'chore', 'revert', 'deps'
+          ];
+          
+          const hasValidLabel = labels.some(label => 
+            validTypes.includes(label.toLowerCase())
+          );
+          
+          if (!hasValidLabel) {
+            core.setFailed(`PR must have one of these labels: ${validTypes.join(', ')}`);
+            
+            // Add comment to PR
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `⚠️ This PR needs a changelog label. Please add one of: \`${validTypes.join('`, `')}\``
+            });
+          } else {
+            console.log(`✅ PR has valid changelog label: ${labels.filter(l => validTypes.includes(l.toLowerCase())).join(', ')}`);
+          }
+
+  # Preview changelog for PRs
+  preview-changelog:
+    name: Preview Changelog
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.sha }}
+
+    - name: Install git-cliff
+      run: |
+        wget -O git-cliff.tar.gz https://github.com/orhun/git-cliff/releases/latest/download/git-cliff-x86_64-unknown-linux-gnu.tar.gz
+        tar -xzf git-cliff.tar.gz
+        sudo mv git-cliff /usr/local/bin/
+        rm git-cliff.tar.gz
+
+    - name: Generate changelog preview
+      run: |
+        # Generate unreleased changes
+        git-cliff --config cliff.toml --unreleased --strip header > changelog-preview.md
+        
+        # Add header
+        echo "## Changelog Preview" > changelog-formatted.md
+        echo "" >> changelog-formatted.md
+        echo "This PR will add the following entries to the changelog:" >> changelog-formatted.md
+        echo "" >> changelog-formatted.md
+        cat changelog-preview.md >> changelog-formatted.md
+
+    - name: Comment on PR
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const changelog = fs.readFileSync('changelog-formatted.md', 'utf8');
+          
+          // Find existing comment
+          const comments = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number
+          });
+          
+          const botComment = comments.data.find(comment => 
+            comment.user.type === 'Bot' && 
+            comment.body.includes('## Changelog Preview')
+          );
+          
+          if (botComment) {
+            // Update existing comment
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: changelog
+            });
+          } else {
+            // Create new comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: changelog
+            });
+          }

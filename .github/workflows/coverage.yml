@@ -1,0 +1,151 @@
+name: Code Coverage
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  coverage:
+    name: Generate Coverage Report
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache cargo dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-coverage-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-coverage-
+          ${{ runner.os }}-cargo-
+
+    - name: Install Claude CLI (mock for testing)
+      run: |
+        mkdir -p ~/.local/bin
+        cat > ~/.local/bin/claude << 'EOF'
+        #!/bin/bash
+        echo '{"content": "test response", "usage": {"input_tokens": 10, "output_tokens": 20}}'
+        EOF
+        chmod +x ~/.local/bin/claude
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Install tarpaulin
+      run: cargo install cargo-tarpaulin --locked
+      
+    - name: Generate coverage report
+      run: |
+        cargo tarpaulin --verbose --all-features --workspace --timeout 300 \
+          --exclude-files "src/bin/*" "tests/*" "benches/*" "examples/*" \
+          --out xml --output-dir target/coverage/
+      timeout-minutes: 15
+      
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: target/coverage/cobertura.xml
+        fail_ci_if_error: false
+        verbose: true
+
+    - name: Upload coverage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: target/coverage/
+        retention-days: 30
+
+  coverage-comment:
+    name: Coverage Comment
+    runs-on: ubuntu-latest
+    needs: coverage
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Download coverage artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage/
+
+    - name: Parse coverage report
+      id: coverage
+      run: |
+        if [ -f coverage/cobertura.xml ]; then
+          COVERAGE=$(grep -o 'line-rate="[^"]*"' coverage/cobertura.xml | head -1 | grep -o '[0-9.]*' | awk '{printf "%.1f", $1*100}')
+          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+          echo "Coverage: $COVERAGE%"
+        else
+          echo "coverage=unknown" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Comment PR with coverage
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const coverage = '${{ steps.coverage.outputs.coverage }}';
+          let emoji = '📊';
+          let message = `## ${emoji} Code Coverage Report\n\n`;
+          
+          if (coverage === 'unknown') {
+            message += '⚠️ Could not determine coverage percentage.\n';
+          } else {
+            const coverageNum = parseFloat(coverage);
+            if (coverageNum >= 80) {
+              emoji = '✅';
+            } else if (coverageNum >= 60) {
+              emoji = '⚠️';
+            } else {
+              emoji = '❌';
+            }
+            message += `${emoji} **Coverage: ${coverage}%**\n\n`;
+            
+            if (coverageNum < 80) {
+              message += '⚠️ Coverage is below the recommended 80% threshold.\n';
+            }
+          }
+          
+          message += '\n💡 **Tip:** Run `cargo tarpaulin --all-features` locally to generate detailed coverage reports.';
+          
+          // Find existing comment
+          const comments = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number
+          });
+          
+          const botComment = comments.data.find(comment => 
+            comment.user.type === 'Bot' && 
+            comment.body.includes('## 📊 Code Coverage Report')
+          );
+          
+          if (botComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: message
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: message
+            });
+          }

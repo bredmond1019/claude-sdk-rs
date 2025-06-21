@@ -1,0 +1,212 @@
+name: Performance Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  benchmarks:
+    name: Run Benchmarks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Need history for comparisons
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache cargo dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-bench-
+          ${{ runner.os }}-cargo-
+
+    - name: Install benchmark tools
+      run: |
+        cargo install cargo-criterion --locked || true
+        cargo install critcmp --locked || true
+
+    - name: Install Claude CLI (mock for testing)
+      run: |
+        mkdir -p ~/.local/bin
+        cat > ~/.local/bin/claude << 'EOF'
+        #!/bin/bash
+        echo '{"content": "test response", "usage": {"input_tokens": 10, "output_tokens": 20}}'
+        EOF
+        chmod +x ~/.local/bin/claude
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Run benchmarks
+      run: |
+        # Run performance benchmarks
+        cargo bench --bench performance -- --save-baseline current
+
+    - name: Compare with baseline (PR only)
+      if: github.event_name == 'pull_request'
+      run: |
+        # Checkout base branch
+        git fetch origin ${{ github.base_ref }}
+        git checkout origin/${{ github.base_ref }}
+        
+        # Run benchmarks on base
+        cargo bench --bench performance -- --save-baseline base
+        
+        # Checkout PR branch again
+        git checkout ${{ github.sha }}
+        
+        # Compare results
+        echo "## Performance Comparison" > benchmark-report.md
+        echo "" >> benchmark-report.md
+        
+        # Use critcmp for comparison
+        critcmp base current >> benchmark-report.md || true
+        
+        # Check for regressions
+        if grep -q "Performance has regressed" benchmark-report.md; then
+          echo "::warning::Performance regression detected"
+          REGRESSION=true
+        else
+          echo "No performance regressions detected"
+          REGRESSION=false
+        fi
+        
+        echo "REGRESSION=$REGRESSION" >> $GITHUB_ENV
+
+    - name: Comment PR with results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          let report = '## 📊 Performance Report\n\n';
+          
+          try {
+            const benchmarkReport = fs.readFileSync('benchmark-report.md', 'utf8');
+            report += benchmarkReport;
+          } catch (e) {
+            report += 'No benchmark comparison available.\n';
+          }
+          
+          if (process.env.REGRESSION === 'true') {
+            report += '\n\n⚠️ **Performance regression detected!** Please review the benchmark results above.';
+          } else {
+            report += '\n\n✅ No performance regressions detected.';
+          }
+          
+          // Find existing comment
+          const comments = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number
+          });
+          
+          const botComment = comments.data.find(comment => 
+            comment.user.type === 'Bot' && 
+            comment.body.includes('## 📊 Performance Report')
+          );
+          
+          if (botComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: report
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: report
+            });
+          }
+
+    - name: Store benchmark results
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-results-${{ github.sha }}
+        path: target/criterion
+        retention-days: 30
+
+    - name: Fail on regression
+      if: github.event_name == 'pull_request' && env.REGRESSION == 'true'
+      run: |
+        echo "::error::Performance regression detected. Please fix before merging."
+        exit 1
+
+  profile-memory:
+    name: Memory Profiling
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install valgrind
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y valgrind
+
+    - name: Build release binaries
+      run: |
+        cargo build --release --workspace
+
+    - name: Profile streaming memory usage
+      run: |
+        # Create a simple test script
+        cat > test_streaming.rs << 'EOF'
+        use claude_sdk_rs::{Client, Config, StreamFormat};
+        use futures::StreamExt;
+        
+        #[tokio::main]
+        async fn main() {
+            let client = Client::builder()
+                .stream_format(StreamFormat::StreamJson)
+                .build()
+                .expect("Failed to create client");
+            
+            // Simulate streaming
+            for _ in 0..10 {
+                let _ = client.send("test").await;
+            }
+        }
+        EOF
+        
+        # Build test binary
+        rustc --edition 2021 -L target/release/deps test_streaming.rs -o test_streaming
+        
+        # Run with valgrind
+        valgrind --tool=massif --massif-out-file=massif.out ./test_streaming || true
+        
+        # Generate report
+        ms_print massif.out > memory-profile.txt || true
+
+    - name: Upload memory profile
+      uses: actions/upload-artifact@v4
+      with:
+        name: memory-profile-${{ github.sha }}
+        path: memory-profile.txt
+        retention-days: 7

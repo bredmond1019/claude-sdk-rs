@@ -1,0 +1,163 @@
+#!/bin/bash
+# Pre-commit hook for claude-ai SDK
+# Checks for potential breaking changes before commit
+
+set -e
+
+echo "🔍 Running pre-commit checks..."
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+print_success() {
+    echo -e "${GREEN}✓ $1${NC}"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠ $1${NC}"
+}
+
+print_error() {
+    echo -e "${RED}✗ $1${NC}"
+}
+
+print_info() {
+    echo -e "${BLUE}ℹ $1${NC}"
+}
+
+# Check if we're in the right directory
+if [ ! -f "Cargo.toml" ] || ! grep -q "\[workspace\]" Cargo.toml; then
+    print_error "Must be run from the workspace root directory"
+    exit 1
+fi
+
+# Make sure our tools are available
+if [ -f "scripts/version-tools.sh" ]; then
+    chmod +x scripts/version-tools.sh
+fi
+
+# 1. Check version consistency
+print_info "Checking version consistency..."
+if [ -f "scripts/version-tools.sh" ]; then
+    if ./scripts/version-tools.sh validate; then
+        print_success "Version consistency check passed"
+    else
+        print_error "Version consistency check failed"
+        exit 1
+    fi
+else
+    print_warning "Version tools script not found, skipping version check"
+fi
+
+# 2. Check code formatting
+print_info "Checking code formatting..."
+if cargo fmt --check; then
+    print_success "Code formatting check passed"
+else
+    print_error "Code formatting check failed"
+    echo "Run 'cargo fmt' to fix formatting issues"
+    exit 1
+fi
+
+# 3. Run clippy for basic linting
+print_info "Running clippy checks..."
+if cargo clippy --workspace --all-targets --all-features -- -D warnings; then
+    print_success "Clippy checks passed"
+else
+    print_error "Clippy checks failed"
+    echo "Fix clippy warnings before committing"
+    exit 1
+fi
+
+# 4. Run basic build test
+print_info "Testing workspace build..."
+if cargo check --workspace --all-features; then
+    print_success "Workspace builds successfully"
+else
+    print_error "Workspace build failed"
+    exit 1
+fi
+
+# 5. Run compatibility tests if available
+print_info "Running API compatibility tests..."
+if [ -d "claude-ai" ]; then
+    cd claude-ai
+    if cargo test api_compatibility_simple --lib --quiet > /dev/null 2>&1; then
+        print_success "API compatibility tests passed"
+    else
+        print_warning "API compatibility tests failed or not available"
+        print_info "This might indicate breaking changes"
+        print_info "Run 'cargo test api_compatibility_simple --lib' for details"
+    fi
+    cd ..
+else
+    print_warning "claude-ai directory not found, skipping compatibility tests"
+fi
+
+# 6. Check for potential breaking changes in public APIs
+print_info "Scanning for potential breaking changes..."
+POTENTIAL_ISSUES=false
+
+# Check for removed public items (basic heuristic)
+if git diff --cached --name-only | grep -E "\.rs$" | xargs -I {} git diff --cached {} | grep -E "^-.*pub (fn|struct|enum|trait|mod|const|static)" > /dev/null 2>&1; then
+    print_warning "Detected removal of public API items"
+    print_info "This might be a breaking change - review carefully"
+    POTENTIAL_ISSUES=true
+fi
+
+# Check for changed function signatures
+if git diff --cached --name-only | grep -E "\.rs$" | xargs -I {} git diff --cached {} | grep -E "^[-+].*pub fn.*\(" | grep -v "^+.*pub fn.*\(" | grep "^-.*pub fn.*\(" > /dev/null 2>&1; then
+    print_warning "Detected changes to public function signatures"
+    print_info "This might be a breaking change - review carefully"
+    POTENTIAL_ISSUES=true
+fi
+
+# Check for version changes
+if git diff --cached Cargo.toml | grep -E "^[-+]version = " > /dev/null 2>&1; then
+    OLD_VERSION=$(git diff --cached Cargo.toml | grep "^-version = " | cut -d'"' -f2 || echo "unknown")
+    NEW_VERSION=$(git diff --cached Cargo.toml | grep "^+version = " | cut -d'"' -f2 || echo "unknown")
+    
+    if [ "$OLD_VERSION" != "unknown" ] && [ "$NEW_VERSION" != "unknown" ]; then
+        print_info "Version change detected: $OLD_VERSION → $NEW_VERSION"
+        
+        # Parse major versions
+        OLD_MAJOR=$(echo "$OLD_VERSION" | cut -d'.' -f1)
+        NEW_MAJOR=$(echo "$NEW_VERSION" | cut -d'.' -f1)
+        
+        if [ "$NEW_MAJOR" -gt "$OLD_MAJOR" ]; then
+            print_info "Major version bump detected - breaking changes expected"
+        elif [ "$POTENTIAL_ISSUES" = true ]; then
+            print_warning "Potential breaking changes detected but no major version bump"
+            print_info "Consider if a major version bump is needed"
+        fi
+    fi
+fi
+
+# 7. Final recommendations
+if [ "$POTENTIAL_ISSUES" = true ]; then
+    echo ""
+    print_warning "Potential compatibility issues detected!"
+    echo "Before committing, consider:"
+    echo "  1. Are these changes backward compatible?"
+    echo "  2. Is a major version bump needed?"
+    echo "  3. Should these changes be deprecated first?"
+    echo "  4. Is migration documentation needed?"
+    echo ""
+    echo "See API_EVOLUTION_GUIDELINES.md and DEPRECATION_POLICY.md for guidance"
+    echo ""
+    
+    # Give user a chance to abort
+    read -p "Continue with commit? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_info "Commit aborted by user"
+        exit 1
+    fi
+fi
+
+print_success "Pre-commit checks completed successfully!"
+echo ""

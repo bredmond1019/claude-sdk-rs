@@ -1,0 +1,39 @@
+# Clippy configuration for Claude SDK Rust
+# This configuration helps maintain high code quality across the project
+
+# Set the maximum allowed complexity for functions (default is 25)
+cognitive-complexity-threshold = 20
+
+# Disable warnings for docs since we have many public APIs still in development
+# Gradually enable these as we improve documentation coverage
+avoid-breaking-exported-api = false
+
+# Ensure we catch correctness issues
+# These are the most important lints to keep enabled
+warn-on-all-wildcard-imports = false  # Allow * imports for convenience
+disallowed-names = ["foo", "bar", "baz"]  # Prevent placeholder names
+
+# Performance-related lints
+# These help identify inefficient code patterns
+too-many-arguments-threshold = 10  # Allow up to 10 arguments for complex builders
+type-complexity-threshold = 300   # Allow complex types for configuration builders
+
+# Style preferences for this project
+trivially-copy-pass-by-ref = false  # Allow passing small types by reference for consistency
+enum-variant-names-threshold = 3    # Require at least 3 characters different in enum variants
+
+# Documentation lints - start lenient and improve over time
+missing-docs-in-private-items = false  # Don't require docs for private items yet
+missing-errors-doc = false            # Don't require error documentation yet
+
+# Disable some lints that conflict with our architecture
+# These are intentional design choices
+single-char-lifetime-names = false    # Allow single char lifetimes like 'a
+module-name-repetitions = false       # Allow repetition in module names like mcp::mcp_client
+
+# Increase nesting threshold for complex async code
+excessive-nesting-threshold = 5       # Allow up to 5 levels of nesting
+
+# Enable extra clippy lints for better code quality
+extra-unused-lifetimes = true
+redundant-pub-crate = true

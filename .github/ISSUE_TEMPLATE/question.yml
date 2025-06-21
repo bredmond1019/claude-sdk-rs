@@ -1,0 +1,142 @@
+name: ❓ Question / Support
+description: Ask a question or get help with using claude-ai
+title: "[Question]: "
+labels: ["question", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Need help with claude-ai? We're here to help!
+        
+        Before submitting, please check:
+        - [Documentation](https://docs.rs/claude-ai)
+        - [Examples](../tree/main/examples)
+        - [Existing discussions](../discussions)
+        - [FAQ](../blob/main/FAQ.md)
+
+  - type: dropdown
+    id: question-type
+    attributes:
+      label: Question Type
+      description: What type of question is this?
+      options:
+        - "How do I...? (Usage question)"
+        - "Why does...? (Behavior explanation)"
+        - "What is the best way to...? (Best practices)"
+        - "Is it possible to...? (Capability question)"
+        - "Performance question"
+        - "Installation/setup help"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+      placeholder: How do I configure timeout values for different types of queries?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and Background
+      description: What are you trying to accomplish? Any relevant background information?
+      placeholder: |
+        I'm building a web application that needs to handle both quick queries (< 5 seconds)
+        and long-running analysis tasks (up to 5 minutes). I want to set different timeout
+        values for different types of requests.
+
+  - type: textarea
+    id: current-approach
+    attributes:
+      label: What Have You Tried?
+      description: What approaches have you already attempted?
+      render: rust
+      placeholder: |
+        let quick_client = Client::builder()
+            .timeout_secs(5)
+            .build();
+        
+        let long_client = Client::builder()
+            .timeout_secs(300)
+            .build();
+        
+        // But this seems inefficient...
+
+  - type: textarea
+    id: expected-outcome
+    attributes:
+      label: Desired Outcome
+      description: What outcome are you hoping to achieve?
+      placeholder: |
+        I want to use a single client instance but dynamically adjust timeout
+        values based on the type of query being performed.
+
+  - type: input
+    id: claude-ai-version
+    attributes:
+      label: claude-ai Version
+      description: What version are you using?
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: rust-version
+    attributes:
+      label: Rust Version
+      description: Output of `rustc --version`
+      placeholder: "rustc 1.75.0 (82e1608df 2023-12-21)"
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      description: Where are you running this?
+      options:
+        - "Development (local machine)"
+        - "Production server"
+        - "Docker container"
+        - "Cloud platform (AWS, GCP, Azure, etc.)"
+        - "CI/CD pipeline"
+        - "Other"
+
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional Information
+      description: Any other relevant details, code snippets, or context
+      placeholder: |
+        - Performance requirements
+        - Constraints or limitations
+        - Related documentation you've read
+        - Similar solutions you've seen
+
+  - type: checkboxes
+    id: research
+    attributes:
+      label: Research Checklist
+      description: Please confirm you've checked these resources
+      options:
+        - label: I have read the documentation
+          required: false
+        - label: I have looked at the examples
+          required: false
+        - label: I have searched existing issues and discussions
+          required: true
+        - label: I couldn't find an answer to my question
+          required: true
+
+  - type: checkboxes
+    id: follow-up
+    attributes:
+      label: Follow-up
+      description: How would you like to contribute back?
+      options:
+        - label: I'm willing to help improve documentation based on the answer
+        - label: I can contribute an example if this is a common use case
+        - label: I'd like to help others with similar questions
+        - label: Just looking for help with my specific use case

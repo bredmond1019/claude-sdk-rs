@@ -1,0 +1,23 @@
+# Rustfmt configuration for Claude SDK Rust
+# This ensures consistent code formatting across the project
+
+# Use stable rustfmt features only to ensure compatibility
+unstable_features = false
+
+# Line length and wrapping
+max_width = 100
+hard_tabs = false
+tab_spaces = 4
+
+# Import organization (stable features only)
+reorder_imports = true
+reorder_modules = true
+
+# Array formatting
+array_width = 80
+
+# Match and conditional formatting
+match_block_trailing_comma = false
+
+# Edition
+edition = "2021"

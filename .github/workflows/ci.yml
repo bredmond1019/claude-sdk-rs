@@ -1,0 +1,297 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Test default features
+  test-default:
+    name: Test Default Features
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+
+    - name: Cache cargo dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-default-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Install Claude CLI (mock for testing)
+      run: |
+        mkdir -p ~/.local/bin
+        cat > ~/.local/bin/claude << 'EOF'
+        #!/bin/bash
+        echo '{"content": "test response", "usage": {"input_tokens": 10, "output_tokens": 20}}'
+        EOF
+        chmod +x ~/.local/bin/claude
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Build with default features
+      run: cargo build --verbose
+
+    - name: Test with default features
+      run: cargo test --verbose
+      timeout-minutes: 5
+
+  # Test CLI feature
+  test-cli:
+    name: Test CLI Feature
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache cargo dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-cli-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Install Claude CLI (mock for testing)
+      run: |
+        mkdir -p ~/.local/bin
+        cat > ~/.local/bin/claude << 'EOF'
+        #!/bin/bash
+        echo '{"content": "test response", "usage": {"input_tokens": 10, "output_tokens": 20}}'
+        EOF
+        chmod +x ~/.local/bin/claude
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Build with CLI features
+      run: cargo build --features cli --verbose
+
+    - name: Test with CLI features
+      run: cargo test --features cli --verbose
+      timeout-minutes: 5
+
+  # Test all features
+  test-all-features:
+    name: Test All Features
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache cargo dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-all-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Install Claude CLI (mock for testing)
+      run: |
+        mkdir -p ~/.local/bin
+        cat > ~/.local/bin/claude << 'EOF'
+        #!/bin/bash
+        echo '{"content": "test response", "usage": {"input_tokens": 10, "output_tokens": 20}}'
+        EOF
+        chmod +x ~/.local/bin/claude
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Build with all features
+      run: cargo build --all-features --verbose
+
+    - name: Test with all features
+      run: cargo test --all-features --verbose
+      timeout-minutes: 10
+
+  # Feature matrix testing
+  test-feature-matrix:
+    name: Test Feature Matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        features:
+          - ""  # default features
+          - "cli"
+          - "analytics"
+          - "mcp"
+          - "sqlite"
+          - "cli,analytics"
+          - "cli,mcp"
+          - "cli,sqlite"
+          - "analytics,mcp"
+          - "mcp,sqlite"
+          - "full"  # all features
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache cargo dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-matrix-${{ matrix.features }}-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Install Claude CLI (mock for testing)
+      run: |
+        mkdir -p ~/.local/bin
+        cat > ~/.local/bin/claude << 'EOF'
+        #!/bin/bash
+        echo '{"content": "test response", "usage": {"input_tokens": 10, "output_tokens": 20}}'
+        EOF
+        chmod +x ~/.local/bin/claude
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Build with features "${{ matrix.features }}"
+      run: |
+        if [ -z "${{ matrix.features }}" ]; then
+          cargo build --verbose
+        else
+          cargo build --features "${{ matrix.features }}" --verbose
+        fi
+
+    - name: Test with features "${{ matrix.features }}"
+      run: |
+        if [ -z "${{ matrix.features }}" ]; then
+          cargo test --verbose
+        else
+          cargo test --features "${{ matrix.features }}" --verbose
+        fi
+      timeout-minutes: 8
+
+  # Code quality checks
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+
+    - name: Cache cargo dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ubuntu-cargo-quality-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Check code formatting
+      run: cargo fmt --check
+
+    - name: Run Clippy linter
+      run: cargo clippy --all-features -- -W clippy::suspicious -W clippy::correctness -A clippy::style -A clippy::nursery -A clippy::pedantic
+
+  # Security audit
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install cargo-audit
+      run: cargo install cargo-audit --locked
+
+    - name: Run security audit
+      run: cargo audit
+
+  # Multi-platform testing
+  cross-platform:
+    name: Cross Platform Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        rust: [stable]
+        include:
+          - os: ubuntu-latest
+            rust: 1.70.0  # MSRV
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
+
+    - name: Cache cargo dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Install Claude CLI (mock for testing)
+      run: |
+        mkdir -p ~/.local/bin
+        cat > ~/.local/bin/claude << 'EOF'
+        #!/bin/bash
+        echo '{"content": "test response", "usage": {"input_tokens": 10, "output_tokens": 20}}'
+        EOF
+        chmod +x ~/.local/bin/claude
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Build
+      run: cargo build --verbose
+
+    - name: Test
+      run: cargo test --verbose
+      timeout-minutes: 5

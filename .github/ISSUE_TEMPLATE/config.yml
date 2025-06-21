@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 GitHub Discussions
+    url: https://github.com/your-org/claude-ai/discussions
+    about: For general questions, ideas, and community discussions
+  - name: 🔒 Security Issues
+    url: https://github.com/your-org/claude-ai/security/advisories
+    about: For reporting security vulnerabilities (private)
+  - name: 📖 Documentation
+    url: https://docs.rs/claude-ai
+    about: API documentation and reference
+  - name: 📋 Examples
+    url: https://github.com/your-org/claude-ai/tree/main/examples
+    about: Code examples and usage patterns

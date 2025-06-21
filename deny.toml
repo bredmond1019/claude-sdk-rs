@@ -1,0 +1,98 @@
+# cargo-deny configuration for security and license checking
+# This file defines the security, license, and dependency policies
+
+[graph]
+# Skip dev-dependencies for faster auditing
+exclude-dev = true
+
+[advisories]
+# Security advisories database
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+# Warn about security vulnerabilities
+vulnerability = "deny"
+# Warn about unmaintained crates
+unmaintained = "warn"
+# Warn about yanked crates
+yanked = "warn"
+# Allow notices (informational advisories)
+notice = "warn"
+# Ignore specific advisories if needed
+ignore = [
+    # "RUSTSEC-0000-0000",  # Example: ignore specific advisory
+]
+
+[licenses]
+# Allowed licenses
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-DFS-2016",
+    "CC0-1.0",
+]
+# Denied licenses
+deny = [
+    "GPL-2.0",
+    "GPL-3.0",
+    "AGPL-1.0",
+    "AGPL-3.0",
+    "LGPL-2.0",
+    "LGPL-2.1",
+    "LGPL-3.0",
+]
+# Confidence threshold for license detection
+confidence-threshold = 0.8
+# Exceptions for specific crates
+exceptions = [
+    # { allow = ["ISC"], name = "some-crate" },
+]
+
+[[licenses.clarify]]
+# Clarify licenses for specific crates
+name = "ring"
+# SPDX expression for the license
+expression = "MIT AND ISC AND OpenSSL"
+# Files to check for license information
+license-files = [
+    { path = "LICENSE", hash = 0xbd0eed23 }
+]
+
+[bans]
+# Multiple versions of the same crate
+multiple-versions = "warn"
+# Wildcards in dependencies
+wildcards = "allow"
+# Highlight notable crates
+highlight = "all"
+# Allow certain crates that commonly have multiple versions
+allow = [
+    # { name = "windows-sys" }, # Often has multiple versions
+]
+# Deny specific crates
+deny = [
+    # { name = "openssl", version = "*" }, # Prefer rustls
+]
+# Skip certain dependencies
+skip = [
+    # { name = "winapi", version = "=0.2.8" },
+]
+# Skip dependency trees rooted at these crates
+skip-tree = [
+    # { name = "winapi", version = "=0.2.8" },
+]
+
+[sources]
+# Unknown registry
+unknown-registry = "warn"
+# Unknown git source
+unknown-git = "warn"
+# Allow crates.io
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# Allow specific git repositories
+allow-git = [
+    # "https://github.com/username/repo",
+]

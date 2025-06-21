@@ -1,0 +1,344 @@
+name: Compatibility Monitoring
+
+on:
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:  # Allow manual triggering
+  push:
+    branches: [main, master]
+    paths:
+      - 'claude-ai*/**/*.rs'
+      - 'claude-ai*/Cargo.toml'
+      - 'Cargo.toml'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  comprehensive-compatibility:
+    name: Comprehensive Compatibility Check
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        rust: [stable, beta, nightly]
+        include:
+          - rust: stable
+            continue-on-error: false
+          - rust: beta
+            continue-on-error: true
+          - rust: nightly
+            continue-on-error: true
+    
+    continue-on-error: ${{ matrix.continue-on-error }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Install Rust toolchain (${{ matrix.rust }})
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
+        components: rustfmt, clippy
+    
+    - name: Cache Cargo dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-${{ matrix.rust }}-
+    
+    - name: Install cargo-semver-checks (stable only)
+      if: matrix.rust == 'stable'
+      run: |
+        if ! command -v cargo-semver-checks &> /dev/null; then
+          cargo install cargo-semver-checks
+        fi
+    
+    - name: Run full compatibility test suite
+      run: |
+        echo "🧪 Running compatibility tests on Rust ${{ matrix.rust }}..."
+        
+        # Test workspace build
+        if cargo build --workspace --all-features; then
+          echo "✅ Workspace builds successfully on ${{ matrix.rust }}"
+        else
+          echo "❌ Workspace build failed on ${{ matrix.rust }}"
+          exit 1
+        fi
+        
+        # Test workspace tests
+        if cargo test --workspace --all-features; then
+          echo "✅ All tests pass on ${{ matrix.rust }}"
+        else
+          echo "❌ Tests failed on ${{ matrix.rust }}"
+          exit 1
+        fi
+        
+        # Test examples
+        cd examples
+        if cargo check --all-targets; then
+          echo "✅ Examples compile on ${{ matrix.rust }}"
+        else
+          echo "❌ Examples failed to compile on ${{ matrix.rust }}"
+          exit 1
+        fi
+        cd ..
+    
+    - name: Check API compatibility (stable only)
+      if: matrix.rust == 'stable'
+      run: |
+        echo "🔍 Running API compatibility checks..."
+        
+        # Run our custom compatibility tests
+        cd claude-ai
+        cargo test api_compatibility_simple --lib --verbose
+        cd ..
+        
+        # Check version consistency
+        ./scripts/version-tools.sh validate
+    
+    - name: Historical compatibility check (stable only)
+      if: matrix.rust == 'stable'
+      run: |
+        echo "📚 Checking historical compatibility..."
+        
+        # Only run if we have previous tags
+        if git tag --list | head -1; then
+          echo "Found previous releases, checking compatibility..."
+          
+          # Get the latest release tag
+          LATEST_TAG=$(git tag --list --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+          
+          if [ -n "$LATEST_TAG" ]; then
+            echo "Comparing against latest release: $LATEST_TAG"
+            
+            # Check each publishable crate
+            CRATES=("claude-ai-core" "claude-ai-mcp" "claude-ai-runtime" "claude-ai")
+            
+            for crate in "${CRATES[@]}"; do
+              if [ -d "$crate" ]; then
+                echo "Checking $crate against $LATEST_TAG..."
+                
+                # Note: This would require the previous version to be published
+                # For now, we'll just note the comparison point
+                echo "Would compare $crate current version against $LATEST_TAG"
+              fi
+            done
+          else
+            echo "No release tags found matching semver pattern"
+          fi
+        else
+          echo "No previous releases found to compare against"
+        fi
+    
+    - name: Generate compatibility report
+      if: matrix.rust == 'stable'
+      run: |
+        echo "📊 Generating compatibility report..."
+        
+        # Create a comprehensive report
+        REPORT_FILE="compatibility-report-$(date +%Y-%m-%d).md"
+        
+        cat > "$REPORT_FILE" << EOF
+        # Compatibility Report - $(date +%Y-%m-%d)
+        
+        ## Summary
+        
+        - **Rust Version**: ${{ matrix.rust }}
+        - **Date**: $(date)
+        - **Commit**: ${{ github.sha }}
+        - **Branch**: ${{ github.ref_name }}
+        
+        ## Test Results
+        
+        ### Workspace Build
+        - ✅ All crates build successfully
+        
+        ### Test Suite
+        - ✅ All tests pass
+        
+        ### Examples
+        - ✅ All examples compile
+        
+        ### API Compatibility
+        - ✅ API surface remains stable
+        
+        ### Version Consistency
+        - ✅ All crate versions are consistent
+        
+        ## Crate Information
+        
+        EOF
+        
+        # Add current versions
+        echo "### Current Versions" >> "$REPORT_FILE"
+        echo "" >> "$REPORT_FILE"
+        echo "| Crate | Version |" >> "$REPORT_FILE"
+        echo "|-------|---------|" >> "$REPORT_FILE"
+        
+        WORKSPACE_VERSION=$(grep '^version = ' Cargo.toml | head -n1 | cut -d'"' -f2)
+        echo "| Workspace | $WORKSPACE_VERSION |" >> "$REPORT_FILE"
+        
+        for crate_dir in claude-ai-*/ claude-ai/; do
+          if [ -d "$crate_dir" ] && [ -f "${crate_dir}Cargo.toml" ]; then
+            crate_name=$(basename "$crate_dir")
+            echo "| $crate_name | $WORKSPACE_VERSION |" >> "$REPORT_FILE"
+          fi
+        done
+        
+        echo "" >> "$REPORT_FILE"
+        echo "Generated by: GitHub Actions" >> "$REPORT_FILE"
+        
+        # Save report as artifact
+        echo "Report generated: $REPORT_FILE"
+        
+        # Add summary to GitHub
+        echo "## 📊 Compatibility Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ All compatibility checks passed on Rust ${{ matrix.rust }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- **Workspace Version**: $WORKSPACE_VERSION" >> $GITHUB_STEP_SUMMARY
+        echo "- **Test Date**: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Rust Toolchain**: ${{ matrix.rust }}" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Upload compatibility report
+      if: matrix.rust == 'stable'
+      uses: actions/upload-artifact@v3
+      with:
+        name: compatibility-report
+        path: compatibility-report-*.md
+        retention-days: 30
+
+  dependency-compatibility:
+    name: Dependency Compatibility Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Install cargo-audit
+      run: cargo install cargo-audit
+    
+    - name: Security audit
+      run: |
+        echo "🔐 Running security audit..."
+        
+        if cargo audit; then
+          echo "✅ No security vulnerabilities found"
+          echo "## 🔐 Security Audit" >> $GITHUB_STEP_SUMMARY
+          echo "✅ No security vulnerabilities detected in dependencies" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ Security vulnerabilities found"
+          echo "## 🔐 Security Audit" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ Security vulnerabilities detected. Please review and update dependencies." >> $GITHUB_STEP_SUMMARY
+          # Don't fail the job for security issues, just warn
+        fi
+    
+    - name: Check for outdated dependencies
+      run: |
+        echo "📦 Checking for outdated dependencies..."
+        
+        # Install cargo-outdated if not present
+        if ! command -v cargo-outdated &> /dev/null; then
+          cargo install cargo-outdated
+        fi
+        
+        # Check for outdated dependencies
+        if cargo outdated --workspace; then
+          echo "📦 Dependency check completed"
+        else
+          echo "ℹ️ Some dependencies may be outdated"
+        fi
+    
+    - name: Test with updated dependencies
+      run: |
+        echo "🔄 Testing with updated dependencies..."
+        
+        # Create a backup of Cargo.lock
+        cp Cargo.lock Cargo.lock.backup
+        
+        # Update dependencies
+        cargo update
+        
+        # Test that everything still works
+        if cargo test --workspace --all-features; then
+          echo "✅ All tests pass with updated dependencies"
+          echo "## 📦 Dependency Update Test" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All tests pass with the latest compatible dependency versions" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Tests fail with updated dependencies"
+          echo "## 📦 Dependency Update Test" >> $GITHUB_STEP_SUMMARY
+          echo "❌ Some tests fail with updated dependencies. Manual review required." >> $GITHUB_STEP_SUMMARY
+          # Restore backup
+          mv Cargo.lock.backup Cargo.lock
+          exit 1
+        fi
+
+  msrv-compatibility:
+    name: MSRV Compatibility Check
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        rust: ['1.70', '1.75', 'stable']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install Rust ${{ matrix.rust }}
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
+    
+    - name: Cache Cargo dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-msrv-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Test MSRV compatibility
+      run: |
+        echo "🦀 Testing compatibility with Rust ${{ matrix.rust }}..."
+        
+        # Test workspace build
+        if cargo build --workspace --all-features; then
+          echo "✅ Builds successfully on Rust ${{ matrix.rust }}"
+        else
+          echo "❌ Build failed on Rust ${{ matrix.rust }}"
+          if [ "${{ matrix.rust }}" = "1.70" ]; then
+            echo "This is the declared MSRV - this failure needs immediate attention!"
+            exit 1
+          else
+            echo "This is a newer Rust version - unexpected failure"
+            exit 1
+          fi
+        fi
+        
+        # Test basic functionality
+        if cargo test --workspace --lib; then
+          echo "✅ Tests pass on Rust ${{ matrix.rust }}"
+        else
+          echo "❌ Tests failed on Rust ${{ matrix.rust }}"
+          exit 1
+        fi

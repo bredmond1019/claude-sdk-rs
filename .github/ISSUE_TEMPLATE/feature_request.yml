@@ -1,0 +1,163 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a new feature! We appreciate ideas that help make claude-sdk-rs better.
+        
+        Please provide as much detail as possible to help us understand your request.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Feature Summary
+      description: A clear and concise description of the feature you'd like to see
+      placeholder: Add support for streaming responses with real-time updates
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation and Use Cases
+      description: Why would this feature be useful? What problem does it solve?
+      placeholder: |
+        This would allow applications to show progress to users during long-running queries,
+        improving user experience by providing real-time feedback instead of waiting for
+        the complete response.
+    validations:
+      required: true
+
+  - type: textarea
+    id: detailed-description
+    attributes:
+      label: Detailed Description
+      description: Provide a detailed description of how this feature should work
+      placeholder: |
+        The feature should allow users to:
+        1. Enable streaming mode in the configuration
+        2. Receive partial responses as they're generated
+        3. Handle both incremental text and metadata updates
+        4. Maintain backward compatibility with existing APIs
+
+  - type: textarea
+    id: proposed-api
+    attributes:
+      label: Proposed API Design
+      description: If you have ideas for the API design, please share them
+      render: rust
+      placeholder: |
+        // Example API design
+        let client = Client::builder()
+            .stream_format(StreamFormat::Streaming)
+            .build();
+        
+        let mut stream = client.query("Write a story")
+            .stream()
+            .await?;
+        
+        while let Some(chunk) = stream.next().await {
+            match chunk? {
+                StreamChunk::Text(text) => print!("{}", text),
+                StreamChunk::Metadata(meta) => handle_metadata(meta),
+                StreamChunk::Complete => break,
+            }
+        }
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: Have you considered any alternative approaches or workarounds?
+      placeholder: |
+        - Using polling to check for updates
+        - Implementing custom callback mechanisms
+        - Breaking large queries into smaller chunks
+
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: Implementation Complexity
+      description: How complex do you think this feature would be to implement?
+      options:
+        - "Simple (minor API addition)"
+        - "Moderate (requires some internal changes)"
+        - "Complex (significant architectural changes)"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - "Critical (blocking my use case)"
+        - "High (would significantly improve my workflow)"
+        - "Medium (nice to have)"
+        - "Low (minor improvement)"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: breaking-changes
+    attributes:
+      label: Breaking Changes
+      description: Would this feature require breaking changes?
+      options:
+        - label: This feature would require breaking changes to existing APIs
+        - label: This feature could be implemented without breaking changes
+        - label: I'm not sure about the impact on existing APIs
+
+  - type: checkboxes
+    id: implementation-interest
+    attributes:
+      label: Implementation Interest
+      description: Are you interested in helping implement this feature?
+      options:
+        - label: I would like to implement this feature myself
+        - label: I would like to help with implementation
+        - label: I would like to help with testing
+        - label: I would like to help with documentation
+        - label: I prefer to let maintainers implement this
+
+  - type: textarea
+    id: research
+    attributes:
+      label: Research and References
+      description: Any relevant research, similar implementations, or references
+      placeholder: |
+        - Similar feature in library X: [link]
+        - Related discussion: [link]
+        - Technical reference: [link]
+        - Industry standard: [link]
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other information that would help us understand this request
+      placeholder: |
+        - Screenshots or mockups
+        - Performance considerations
+        - Compatibility requirements
+        - Timeline constraints
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please verify you've completed these steps
+      options:
+        - label: I have searched existing issues and discussions for similar requests
+          required: true
+        - label: I have considered how this fits with the project's goals and scope
+          required: true
+        - label: I have provided sufficient detail for maintainers to understand the request
+          required: true
+        - label: I understand this is a request and not a guarantee of implementation
+          required: true

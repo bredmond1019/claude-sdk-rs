@@ -1,0 +1,167 @@
+name: 📚 Documentation Issue
+description: Report issues with documentation or suggest improvements
+title: "[Docs]: "
+labels: ["documentation", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us improve our documentation! Whether you found an error, something confusing,
+        or have suggestions for improvement, we appreciate your feedback.
+
+  - type: dropdown
+    id: doc-type
+    attributes:
+      label: Documentation Type
+      description: What type of documentation is this about?
+      options:
+        - "API Documentation (docs.rs)"
+        - "README"
+        - "Getting Started Guide"
+        - "Examples"
+        - "Code Comments"
+        - "Contributing Guidelines"
+        - "Architecture Documentation"
+        - "Performance Guide"
+        - "Troubleshooting"
+        - "Migration Guide"
+        - "Other"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Issue Type
+      description: What kind of documentation issue is this?
+      options:
+        - "Error or incorrect information"
+        - "Missing information"
+        - "Confusing or unclear explanation"
+        - "Outdated content"
+        - "Broken link"
+        - "Typo or grammar error"
+        - "Missing example"
+        - "Suggestion for improvement"
+        - "Request for new documentation"
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Documentation Location
+      description: URL or file path where the issue exists
+      placeholder: "https://docs.rs/claude-ai/1.0.0/claude_ai/struct.Client.html or docs/GETTING_STARTED.md"
+    validations:
+      required: true
+
+  - type: textarea
+    id: issue-description
+    attributes:
+      label: Issue Description
+      description: Describe the documentation issue clearly
+      placeholder: |
+        The example in the Client::query documentation uses an outdated API.
+        It shows `client.query("text").execute()` but the method is now called `send()`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-content
+    attributes:
+      label: Current Content
+      description: Copy the current documentation content that has issues (if applicable)
+      placeholder: |
+        ```rust
+        let response = client.query("Hello").execute().await?;
+        ```
+
+  - type: textarea
+    id: suggested-content
+    attributes:
+      label: Suggested Improvement
+      description: How should this be fixed or improved?
+      placeholder: |
+        ```rust
+        let response = client.query("Hello").send().await?;
+        ```
+        
+        Also add a note about the migration from `execute()` to `send()` in v1.1.0.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What were you trying to accomplish when you found this issue?
+      placeholder: |
+        I was following the getting started guide to create my first claude-ai application,
+        but the example code didn't work with the current version.
+
+  - type: dropdown
+    id: user-level
+    attributes:
+      label: User Experience Level
+      description: What's your experience level? This helps us understand the impact.
+      options:
+        - "New to claude-ai"
+        - "Some experience with claude-ai"
+        - "Experienced claude-ai user"
+        - "New to Rust"
+        - "Experienced Rust developer"
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: How did this documentation issue affect you?
+      placeholder: |
+        - Spent 30 minutes trying to figure out why the example didn't work
+        - Had to search through other examples to find the correct method
+        - Almost gave up on using the library
+
+  - type: textarea
+    id: additional-suggestions
+    attributes:
+      label: Additional Suggestions
+      description: Any other improvements you'd like to see in the documentation?
+      placeholder: |
+        - More real-world examples
+        - Better error handling patterns
+        - Performance optimization tips
+        - Common pitfalls section
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution Interest
+      description: Would you like to help fix this documentation issue?
+      options:
+        - label: I'd like to submit a PR to fix this issue
+        - label: I can help review documentation improvements
+        - label: I can help test documentation changes
+        - label: I prefer to let maintainers handle the fix
+
+  - type: textarea
+    id: related-issues
+    attributes:
+      label: Related Issues
+      description: Are there any related documentation issues or improvements?
+      placeholder: |
+        - Issue #123 about outdated examples
+        - Similar confusion mentioned in discussion #456
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please verify you've completed these steps
+      options:
+        - label: I have checked that this isn't already reported
+          required: true
+        - label: I have provided specific details about the location and issue
+          required: true
+        - label: I have suggested how to improve the documentation
+          required: false

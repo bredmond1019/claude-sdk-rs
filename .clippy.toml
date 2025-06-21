@@ -1,0 +1,36 @@
+# Clippy configuration for claude-sdk-rs workspace
+
+# Maximum cognitive complexity allowed per function
+cognitive-complexity-threshold = 30
+
+# Maximum number of lines allowed per function
+too-many-lines-threshold = 100
+
+# Maximum number of arguments allowed per function
+too-many-arguments-threshold = 7
+
+# Type complexity threshold
+type-complexity-threshold = 250
+
+# Maximum nesting depth
+excessive-nesting-threshold = 5
+
+# Maximum size for enum variants (in bytes)
+enum-variant-size-threshold = 200
+
+# Avoid breaking changes
+avoid-breaking-exported-api = true
+
+# Note: missing-docs is enforced via #![warn(missing_docs)] in lib.rs files
+
+# Allow certain common identifiers
+doc-valid-idents = [
+    "Claude",
+    "MCP",
+    "StreamJson",
+    "WebSocket",
+]
+
+# Disallow specific macros
+disallowed-macros = []
+

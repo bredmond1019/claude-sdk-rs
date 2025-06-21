@@ -1,0 +1,153 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a bug! This helps us improve claude-sdk-rs for everyone.
+        
+        Please fill out the form below to help us understand and reproduce the issue.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of the bug
+      placeholder: Describe what happened and what you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the issue
+      placeholder: |
+        1. Create a client with `Client::new(Config::default())`
+        2. Call `client.query("test").send().await`
+        3. Observe error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: The query should complete successfully and return a response
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+      placeholder: The query failed with a timeout error
+    validations:
+      required: true
+
+  - type: textarea
+    id: code
+    attributes:
+      label: Minimal Code Example
+      description: If applicable, provide a minimal code example that reproduces the issue
+      render: rust
+      placeholder: |
+        use claude_sdk_rs::*;
+        
+        #[tokio::main]
+        async fn main() -> Result<(), Box<dyn std::error::Error>> {
+            let client = Client::new(Config::default());
+            let response = client.query("Hello").send().await?;
+            println!("{}", response);
+            Ok(())
+        }
+
+  - type: input
+    id: claude-sdk-rs-version
+    attributes:
+      label: claude-sdk-rs Version
+      description: What version of claude-sdk-rs are you using?
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: rust-version
+    attributes:
+      label: Rust Version
+      description: Output of `rustc --version`
+      placeholder: "rustc 1.75.0 (82e1608df 2023-12-21)"
+    validations:
+      required: true
+
+  - type: input
+    id: claude-cli-version
+    attributes:
+      label: Claude CLI Version
+      description: Output of `claude --version` (if applicable)
+      placeholder: "claude 0.1.0"
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      description: What operating system are you using?
+      options:
+        - Linux
+        - macOS
+        - Windows
+        - Other (please specify in additional context)
+    validations:
+      required: true
+
+  - type: textarea
+    id: error-output
+    attributes:
+      label: Error Output
+      description: Full error message, stack trace, or logs
+      render: text
+      placeholder: |
+        Error: Operation timed out after 30s
+            at claude_sdk_rs::runtime::process::execute_claude (src/process.rs:123)
+            ...
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Details
+      description: Any additional environment details that might be relevant
+      placeholder: |
+        - Running in Docker: Yes/No
+        - Behind corporate firewall: Yes/No
+        - Using proxy: Yes/No
+        - Any special configuration
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other information that might help us understand the issue
+      placeholder: |
+        - This worked in a previous version
+        - Only happens with certain inputs
+        - Workaround I found
+        - Related issues
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please verify you've completed these steps
+      options:
+        - label: I have searched existing issues to ensure this isn't a duplicate
+          required: true
+        - label: I have provided all the requested information above
+          required: true
+        - label: I have tested with the latest version of claude-sdk-rs
+          required: false
+        - label: I am willing to help test a fix for this issue
+          required: false
