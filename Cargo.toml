@@ -60,7 +60,7 @@ prettytable-rs = { version = "0.10", optional = true }
 tempfile = { version = "3.10", optional = true }
 toml = { version = "0.8", optional = true }
 lru = { version = "0.12", optional = true }
-sysinfo = { version = "0.32", optional = true }
+sysinfo = { version = "0.37", optional = true }
 
 [dev-dependencies]
 proptest = "1.5"
