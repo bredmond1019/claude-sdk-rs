@@ -254,55 +254,6 @@ impl Error {
     }
 }
 
-// Conversion from CLI InteractiveError to core Error
-#[cfg(feature = "cli")]
-impl From<crate::cli::error::InteractiveError> for Error {
-    fn from(err: crate::cli::error::InteractiveError) -> Self {
-        match err {
-            crate::cli::error::InteractiveError::CommandDiscovery(msg) => Error::ProcessError(msg),
-            crate::cli::error::InteractiveError::CommandNotFound(msg) => {
-                Error::ProcessError(format!("Command not found: {}", msg))
-            }
-            crate::cli::error::InteractiveError::Session(msg) => Error::SessionNotFound(msg),
-            crate::cli::error::InteractiveError::SessionNotFound(id) => Error::SessionNotFound(id),
-            crate::cli::error::InteractiveError::Execution(msg) => Error::ProcessError(msg),
-            crate::cli::error::InteractiveError::ParallelExecution(msg) => {
-                Error::ProcessError(format!("Parallel execution: {}", msg))
-            }
-            crate::cli::error::InteractiveError::CostTracking(msg) => {
-                Error::ProcessError(format!("Cost tracking: {}", msg))
-            }
-            crate::cli::error::InteractiveError::History(msg) => {
-                Error::ProcessError(format!("History: {}", msg))
-            }
-            crate::cli::error::InteractiveError::OutputFormatting(msg) => {
-                Error::ProcessError(format!("Output formatting: {}", msg))
-            }
-            crate::cli::error::InteractiveError::Configuration(msg) => Error::ConfigError(msg),
-            crate::cli::error::InteractiveError::PermissionDenied(msg) => {
-                Error::PermissionDenied(msg)
-            }
-            crate::cli::error::InteractiveError::InvalidInput(msg) => Error::InvalidInput(msg),
-            crate::cli::error::InteractiveError::Timeout(secs) => Error::Timeout(secs),
-            crate::cli::error::InteractiveError::Io(err) => Error::Io(err),
-            crate::cli::error::InteractiveError::Serialization(err) => {
-                Error::SerializationError(err)
-            }
-            crate::cli::error::InteractiveError::ClaudeSDK(err) => err,
-            crate::cli::error::InteractiveError::Uuid(_) => {
-                Error::InvalidInput("UUID parsing error".to_string())
-            }
-            crate::cli::error::InteractiveError::FileWatcher(err) => Error::Io(
-                std::io::Error::new(std::io::ErrorKind::Other, err.to_string()),
-            ),
-            crate::cli::error::InteractiveError::AsyncTask(err) => {
-                Error::ProcessError(format!("Async task: {}", err))
-            }
-            crate::cli::error::InteractiveError::Utf8Conversion(err) => Error::Utf8Error(err),
-        }
-    }
-}
-
 /// Type alias for Results with Claude AI SDK errors
 ///
 /// This is a convenience type alias that uses [`enum@Error`] as the error type.

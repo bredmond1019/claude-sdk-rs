@@ -23,7 +23,9 @@ impl SqliteStorage {
                 .map_err(|e| Error::Io(e))?;
         }
 
-        let connection_string = format!("sqlite:{}", path.display());
+        // `mode=rwc` opens read-write and creates the database file if it does not
+        // yet exist; without it sqlx fails with "unable to open database file".
+        let connection_string = format!("sqlite:{}?mode=rwc", path.display());
 
         let pool = SqlitePoolOptions::new()
             .max_connections(5)
