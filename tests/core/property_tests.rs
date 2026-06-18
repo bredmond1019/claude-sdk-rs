@@ -3,7 +3,7 @@
 //! This module uses property-based testing to verify invariants and properties
 //! that should hold for all valid inputs to core types and functions.
 
-use claude_sdk_rs_core::*;
+use claude_sdk_rs::core::*;
 use proptest::prelude::*;
 
 // Property test strategies for generating test data

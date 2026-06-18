@@ -11,7 +11,7 @@ use std::str::FromStr;
 /// # Examples
 ///
 /// ```rust
-/// use claude_sdk_rs_core::ClaudeCliResponse;
+/// use claude_sdk_rs::core::ClaudeCliResponse;
 /// use serde_json;
 ///
 /// // This would typically come from parsing Claude CLI output
@@ -28,7 +28,7 @@ use std::str::FromStr;
 ///     "session_id": "session_123"
 /// }"#;
 ///
-/// let response: ClaudeCliResponse = serde_json::from_str(json)?;
+/// let response: ClaudeCliResponse = serde_json::from_str(json).unwrap();
 /// assert_eq!(response.result, "Hello, world!");
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -74,7 +74,7 @@ pub struct ClaudeCliResponse {
 /// # Examples
 ///
 /// ```rust
-/// use claude_sdk_rs_core::ClaudeResponse;
+/// use claude_sdk_rs::core::ClaudeResponse;
 ///
 /// // Simple text response
 /// let response = ClaudeResponse::text("Hello, world!".to_string());
@@ -118,10 +118,10 @@ pub struct ClaudeResponse {
 /// # Examples
 ///
 /// ```rust
-/// use claude_sdk_rs_core::ResponseMetadata;
+/// use claude_sdk_rs::core::ResponseMetadata;
 ///
 /// // Accessing metadata from a response
-/// # let response = claude_sdk_rs_core::ClaudeResponse::text("test".to_string());
+/// # let response = claude_sdk_rs::core::ClaudeResponse::text("test".to_string());
 /// if let Some(metadata) = &response.metadata {
 ///     if let Some(cost) = metadata.cost_usd {
 ///         println!("Request cost: ${:.6}", cost);
@@ -155,9 +155,9 @@ pub struct ResponseMetadata {
 /// # Examples
 ///
 /// ```rust
-/// use claude_sdk_rs_core::TokenUsage;
+/// use claude_sdk_rs::core::TokenUsage;
 ///
-/// # let response = claude_sdk_rs_core::ClaudeResponse::text("test".to_string());
+/// # let response = claude_sdk_rs::core::ClaudeResponse::text("test".to_string());
 /// if let Some(metadata) = &response.metadata {
 ///     if let Some(tokens) = &metadata.tokens_used {
 ///         if let (Some(input), Some(output)) = (tokens.input_tokens, tokens.output_tokens) {
@@ -190,7 +190,7 @@ impl ClaudeResponse {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::ClaudeResponse;
+    /// use claude_sdk_rs::core::ClaudeResponse;
     ///
     /// let response = ClaudeResponse::text("Hello, world!".to_string());
     /// assert_eq!(response.content, "Hello, world!");
@@ -214,7 +214,7 @@ impl ClaudeResponse {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::ClaudeResponse;
+    /// use claude_sdk_rs::core::ClaudeResponse;
     /// use serde_json::json;
     ///
     /// let raw_json = json!({
@@ -288,7 +288,7 @@ impl ClaudeResponse {
 /// # Examples
 ///
 /// ```rust
-/// use claude_sdk_rs_core::ToolPermission;
+/// use claude_sdk_rs::core::ToolPermission;
 ///
 /// // Allow specific MCP server tool
 /// let mcp_tool = ToolPermission::mcp("database", "query");
@@ -296,7 +296,7 @@ impl ClaudeResponse {
 ///
 /// // Allow specific bash command
 /// let bash_tool = ToolPermission::bash("ls");
-/// assert_eq!(bash_tool.to_cli_format(), "bash:ls");
+/// assert_eq!(bash_tool.to_cli_format(), "Bash(ls)");
 ///
 /// // Allow all tools
 /// let all_tools = ToolPermission::All;
@@ -338,7 +338,7 @@ impl ToolPermission {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::ToolPermission;
+    /// use claude_sdk_rs::core::ToolPermission;
     ///
     /// // Allow specific tool
     /// let tool = ToolPermission::mcp("database", "query");
@@ -358,10 +358,10 @@ impl ToolPermission {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::ToolPermission;
+    /// use claude_sdk_rs::core::ToolPermission;
     ///
     /// let permission = ToolPermission::bash("ls");
-    /// assert_eq!(permission.to_cli_format(), "bash:ls");
+    /// assert_eq!(permission.to_cli_format(), "Bash(ls)");
     /// ```
     pub fn bash(command: impl Into<String>) -> Self {
         Self::Bash {
@@ -380,7 +380,7 @@ impl ToolPermission {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::ToolPermission;
+    /// use claude_sdk_rs::core::ToolPermission;
     ///
     /// assert_eq!(
     ///     ToolPermission::mcp("server", "tool").to_cli_format(),
@@ -424,7 +424,7 @@ impl ToolPermission {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::ToolPermission;
+    /// use claude_sdk_rs::core::ToolPermission;
     /// use std::str::FromStr;
     ///
     /// // Bash command formats
@@ -522,7 +522,7 @@ impl ToolPermission {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::ToolPermission;
+    /// use claude_sdk_rs::core::ToolPermission;
     ///
     /// // Valid permissions
     /// assert!(ToolPermission::bash("ls").validate().is_ok());
@@ -583,10 +583,10 @@ impl FromStr for ToolPermission {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::ToolPermission;
+    /// use claude_sdk_rs::core::ToolPermission;
     /// use std::str::FromStr;
     ///
-    /// let permission = ToolPermission::from_str("Bash(ls)")?;
+    /// let permission = ToolPermission::from_str("Bash(ls)").unwrap();
     /// assert_eq!(permission, ToolPermission::bash("ls"));
     /// ```
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -602,7 +602,7 @@ impl FromStr for ToolPermission {
 /// # Examples
 ///
 /// ```rust
-/// use claude_sdk_rs_core::Cost;
+/// use claude_sdk_rs::core::Cost;
 ///
 /// let cost1 = Cost::new(0.001);
 /// let cost2 = Cost::new(0.002);
@@ -622,7 +622,7 @@ impl Cost {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Cost;
+    /// use claude_sdk_rs::core::Cost;
     ///
     /// let cost = Cost::new(0.001234);
     /// assert_eq!(cost.usd, 0.001234);
@@ -636,7 +636,7 @@ impl Cost {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Cost;
+    /// use claude_sdk_rs::core::Cost;
     ///
     /// let cost = Cost::zero();
     /// assert_eq!(cost.usd, 0.0);
@@ -650,7 +650,7 @@ impl Cost {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Cost;
+    /// use claude_sdk_rs::core::Cost;
     ///
     /// let cost1 = Cost::new(0.001);
     /// let cost2 = Cost::new(0.002);

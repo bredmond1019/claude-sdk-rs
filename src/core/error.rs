@@ -52,7 +52,7 @@ impl fmt::Display for ErrorCode {
 /// # Examples
 ///
 /// ```rust
-/// use claude_sdk_rs_core::{Error, Result};
+/// use claude_sdk_rs::core::{Error, Result};
 ///
 /// fn handle_error(result: Result<String>) {
 ///     match result {
@@ -203,7 +203,7 @@ impl Error {
     /// # Example
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Error;
+    /// use claude_sdk_rs::core::Error;
     ///
     /// let error = Error::BinaryNotFound;
     /// assert_eq!(error.code().to_string(), "C001");
@@ -235,7 +235,7 @@ impl Error {
     /// # Example
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Error;
+    /// use claude_sdk_rs::core::Error;
     ///
     /// let error = Error::Timeout(30);
     /// if error.is_recoverable() {
@@ -262,7 +262,7 @@ impl Error {
 /// # Examples
 ///
 /// ```rust
-/// use claude_sdk_rs_core::Result;
+/// use claude_sdk_rs::core::Result;
 ///
 /// fn example_function() -> Result<String> {
 ///     Ok("success".to_string())

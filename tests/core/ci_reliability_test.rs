@@ -3,7 +3,7 @@
 //! These tests are designed to be simple, fast, and reliable for CI/CD pipelines.
 //! They focus on core functionality that should always work.
 
-use claude_sdk_rs_core::{Config, Error, StreamFormat};
+use claude_sdk_rs::core::{Config, Error, StreamFormat};
 use serde::de::Error as SerdeError;
 
 /// Test that basic config construction always works

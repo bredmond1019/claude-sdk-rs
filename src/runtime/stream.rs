@@ -15,8 +15,8 @@ use tracing::{debug, error};
 /// # Examples
 ///
 /// ```rust,no_run
-/// # use claude_sdk_rs_runtime::{Client, MessageStream};
-/// # use crate::core::{Config, Message, Result};
+/// # use claude_sdk_rs::runtime::{Client, MessageStream};
+/// # use claude_sdk_rs::core::{Config, Message, Result};
 /// # use futures::StreamExt;
 /// # #[tokio::main]
 /// # async fn main() -> Result<()> {
@@ -30,7 +30,7 @@ use tracing::{debug, error};
 ///             print!("{}", content); // Print content incrementally
 ///         }
 ///         Ok(Message::Result { stats, .. }) => {
-///             println!("\nCompleted with {} tokens", stats.total_tokens);
+///             println!("\nCompleted with {} tokens", stats.total_tokens.total);
 ///         }
 ///         Err(e) => eprintln!("Stream error: {}", e),
 ///         _ => {} // Handle other message types

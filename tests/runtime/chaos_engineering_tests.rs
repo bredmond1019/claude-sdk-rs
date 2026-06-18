@@ -5,8 +5,8 @@
 //! These tests follow chaos engineering principles to discover weaknesses
 //! in a controlled environment.
 
-use claude_sdk_rs_core::{Config, Error, StreamFormat};
-use claude_sdk_rs_runtime::process::{execute_claude, execute_claude_streaming};
+use claude_sdk_rs::core::{Config, Error, StreamFormat};
+use claude_sdk_rs::runtime::process::{execute_claude, execute_claude_streaming};
 use std::sync::{Arc, Barrier};
 use std::time::{Duration, Instant};
 use tokio::time::timeout;

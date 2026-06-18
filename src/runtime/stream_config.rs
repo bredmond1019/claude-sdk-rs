@@ -10,7 +10,7 @@ use std::sync::OnceLock;
 /// # Examples
 ///
 /// ```rust
-/// # use claude_sdk_rs_runtime::StreamConfig;
+/// # use claude_sdk_rs::runtime::StreamConfig;
 /// // Default configuration for general use
 /// let config = StreamConfig::default();
 ///
@@ -134,7 +134,7 @@ pub fn set_stream_config(config: StreamConfig) -> Result<(), StreamConfig> {
 /// # Examples
 ///
 /// ```rust
-/// # use claude_sdk_rs_runtime::{StreamConfig, StreamConfigBuilder};
+/// # use claude_sdk_rs::runtime::{StreamConfig, StreamConfigBuilder};
 /// // Build a custom configuration
 /// let config = StreamConfigBuilder::new()
 ///     .channel_buffer_size(150)

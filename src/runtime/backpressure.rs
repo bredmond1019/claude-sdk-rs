@@ -13,7 +13,7 @@ use tracing::{debug, warn};
 /// # Examples
 ///
 /// ```rust
-/// # use claude_sdk_rs_runtime::BackpressureMonitor;
+/// # use claude_sdk_rs::runtime::BackpressureMonitor;
 /// # use std::time::Duration;
 /// # use tokio::time::sleep;
 /// # #[tokio::main]
@@ -161,7 +161,7 @@ impl BackpressureMonitor {
 /// # Examples
 ///
 /// ```rust
-/// # use claude_sdk_rs_runtime::{BackpressureMonitor, BackpressureSender};
+/// # use claude_sdk_rs::runtime::{BackpressureMonitor, BackpressureSender};
 /// # use tokio::sync::mpsc;
 /// # #[tokio::main]
 /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {

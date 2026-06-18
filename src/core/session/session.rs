@@ -365,7 +365,7 @@ impl Default for SessionManager {
 /// # Examples
 ///
 /// ```rust,no_run
-/// # use claude_sdk_rs_core::{SessionBuilder, Result};
+/// # use claude_sdk_rs::core::{SessionBuilder, Result};
 /// # use serde_json::json;
 /// # #[tokio::main]
 /// # async fn main() -> Result<()> {
@@ -378,7 +378,7 @@ impl Default for SessionManager {
 ///     .await?;
 ///
 /// // Create a managed session (stored in SessionManager)
-/// # use claude_sdk_rs_core::SessionManager;
+/// # use claude_sdk_rs::core::SessionManager;
 /// let manager = SessionManager::new();
 /// let session = manager.create_session()
 ///     .with_system_prompt("You are a data analyst")

@@ -3,7 +3,7 @@
 //! This module contains comprehensive tests for all critical paths in the core library,
 //! targeting >95% test coverage of essential functionality.
 
-use claude_sdk_rs_core::*;
+use claude_sdk_rs::core::*;
 
 #[cfg(test)]
 mod config_tests {
@@ -282,7 +282,7 @@ mod session_tests {
 
 #[cfg(test)]
 mod message_tests {
-    use claude_sdk_rs_core::message::{
+    use claude_sdk_rs::core::message::{
         ConversationStats, Message, MessageMeta, MessageType, TokenUsage,
     };
     use std::time::SystemTime;
@@ -573,7 +573,7 @@ mod message_tests {
 
 #[cfg(test)]
 mod types_tests {
-    use claude_sdk_rs_core::types::{
+    use claude_sdk_rs::core::types::{
         ClaudeCliResponse, ClaudeResponse, Cost, ResponseMetadata, TokenUsage as TypesTokenUsage,
         ToolPermission,
     };

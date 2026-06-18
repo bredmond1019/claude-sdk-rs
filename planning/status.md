@@ -3,7 +3,7 @@
 > Tracks work completed and remaining for the portfolio split-and-trim. See
 > `planning/context.md` for why, and `planning/plans/split-and-trim-for-portfolio.md` for how.
 
-**Current phase:** Phase 5 complete (+ post-review fixup) — ready to begin Phase 6 (naming consistency).
+**Current phase:** Phase 6 complete — ready to begin Phase 7 (write modern `README.md`).
 **Branch:** `split-and-trim-for-portfolio`
 
 ## Completed
@@ -31,7 +31,13 @@ Ordered per the plan; check off as completed.
 - [x] 3. Rewrite `src/lib.rs`: dropped `cli`/`mcp` modules + re-exports (incl. `McpConfig`/`McpServer`); rewrote crate doc to core + runtime + optional `sqlite` only; removed cli/analytics/mcp/full feature sections, the phantom `analytics` feature, the CLI-usage section, and stale example list. Build green (default + `sqlite`).
 - [x] 4. Examples audit: removed `cli_interactive.rs` / `cli_analytics.rs` (gated on removed features), the non-functional `session_persistence.rs` stub, and the 5.2k-line `REAL_WORLD_EXAMPLES.md`; verified `05_complete_app.rs` + `advanced_permissions.rs` use only public API (kept); scrubbed `claude-interactive` / `claude_sdk_rs_core` drift + dangling `LIBRARY_COMPARISON.md` ref; fixed `run_examples.sh`. `cargo build --examples` clean. Report: `planning/phase4/implement.md`
 - [x] 5. Docs trim: removed root `GETTING_STARTED`/`QUICK_START`/`MIGRATION`/`RELEASE_NOTES`/`ROADMAP`, folded `TROUBLESHOOTING` into a short `docs/` FAQ; pruned `docs/` (`FEATURE_FLAGS`, `PERFORMANCE`, dup `MIGRATION`/`TROUBLESHOOTING`) and cli/mcp tutorials `08`–`10`; rewrote `CONTRIBUTING.md` to single-crate, trimmed `docs/TESTING.md`, bumped `SECURITY.md` version table to `2.0.x`; also removed stale `tests/TEST_INVENTORY.md`. Surviving docs: `README`(§7-pending)/`CONTRIBUTING`/`SECURITY`/`CHANGELOG`/`LICENSE` + `docs/{NVM_COMPATIBILITY,SECURITY,TESTING,TROUBLESHOOTING}` + tutorials `00`–`07`. Report: `planning/phase5/implement.md`
-- [ ] 6. Naming consistency: replace `claude-interactive` / `crate_interactive` → `claude-sdk-rs`
+- [x] 6. Naming consistency: swept old workspace crate names in doc examples + `tests/`
+  (`claude_sdk_rs_core` → `claude_sdk_rs::core`, `claude_sdk_rs_runtime` → `claude_sdk_rs::runtime`,
+  and doctest-only `crate::core`/`crate::runtime` → `claude_sdk_rs::*`). Also fixed the residual
+  doctest API drift this uncovered (builder `.build()?`, `Error::Timeout(_)`, `Message` enum
+  matching, `SessionId::new`, `Bash(ls)` cli format, `TokenUsage.total`). **Doctests now 85/0
+  (was 2/83.)** Found: `tests/core/**` + `tests/runtime/**` are orphaned (no `[[test]]` wiring) —
+  grep-clean but not compiled; left as a follow-up. Report: `planning/phase6/implement.md`
 - [ ] 7. Write modern `README.md` (draft ready in plan §7)
 - [ ] 8. Write `CLAUDE.md` (draft ready in plan §8)
 - [ ] 9. CHANGELOG `2.0.0` entry (BREAKING: removed `cli`, `analytics`, `mcp`)

@@ -308,8 +308,8 @@ pub async fn execute_claude(config: &Config, query: &str) -> Result<String> {
 /// # Examples
 ///
 /// ```rust,no_run
-/// use crate::core::Config;
-/// use claude_sdk_rs_runtime::process::execute_claude_streaming;
+/// use claude_sdk_rs::core::Config;
+/// use claude_sdk_rs::runtime::process::execute_claude_streaming;
 /// use futures::StreamExt;
 ///
 /// #[tokio::main]

@@ -29,7 +29,7 @@ pub enum MessageType {
 /// # Examples
 ///
 /// ```rust
-/// # use claude_sdk_rs_core::message::{MessageMeta, TokenUsage};
+/// # use claude_sdk_rs::core::message::{MessageMeta, TokenUsage};
 /// # use std::time::SystemTime;
 /// let meta = MessageMeta {
 ///     session_id: "session-123".to_string(),
@@ -72,7 +72,7 @@ pub struct MessageMeta {
 /// # Examples
 ///
 /// ```rust
-/// # use claude_sdk_rs_core::message::TokenUsage;
+/// # use claude_sdk_rs::core::message::TokenUsage;
 /// let usage = TokenUsage {
 ///     input: 150,
 ///     output: 500,
@@ -161,7 +161,7 @@ pub enum Message {
 /// # Examples
 ///
 /// ```rust
-/// # use claude_sdk_rs_core::message::{ConversationStats, TokenUsage};
+/// # use claude_sdk_rs::core::message::{ConversationStats, TokenUsage};
 /// let stats = ConversationStats {
 ///     total_messages: 10,
 ///     total_cost_usd: 0.045,

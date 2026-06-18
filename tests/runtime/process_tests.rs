@@ -1,5 +1,5 @@
-use claude_sdk_rs_core::{Config, Error, StreamFormat};
-use claude_sdk_rs_runtime::process::execute_claude;
+use claude_sdk_rs::core::{Config, Error, StreamFormat};
+use claude_sdk_rs::runtime::process::execute_claude;
 
 #[cfg(test)]
 mod process_tests {

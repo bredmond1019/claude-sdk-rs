@@ -18,7 +18,7 @@ const MAX_TOOL_NAME_LENGTH: usize = 100;
 /// # Examples
 ///
 /// ```rust
-/// use claude_sdk_rs_core::{Config, StreamFormat};
+/// use claude_sdk_rs::core::{Config, StreamFormat};
 /// use std::path::PathBuf;
 ///
 /// // Default configuration
@@ -178,7 +178,7 @@ pub struct Config {
 /// # Examples
 ///
 /// ```rust
-/// use claude_sdk_rs_core::StreamFormat;
+/// use claude_sdk_rs::core::StreamFormat;
 ///
 /// // For simple text responses (default)
 /// let format = StreamFormat::Text;
@@ -270,7 +270,7 @@ impl Config {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::{Config, StreamFormat};
+    /// use claude_sdk_rs::core::{Config, StreamFormat};
     ///
     /// let config = Config::builder()
     ///     .model("claude-3-opus-20240229")
@@ -466,7 +466,7 @@ impl Config {
 /// # Examples
 ///
 /// ```rust
-/// use claude_sdk_rs_core::{Config, StreamFormat};
+/// use claude_sdk_rs::core::{Config, StreamFormat};
 ///
 /// let config = Config::builder()
 ///     .model("claude-3-sonnet-20240229")
@@ -503,7 +503,7 @@ impl ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Config;
+    /// use claude_sdk_rs::core::Config;
     ///
     /// let config = Config::builder()
     ///     .system_prompt("You are a helpful Rust programming assistant")
@@ -523,7 +523,7 @@ impl ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Config;
+    /// use claude_sdk_rs::core::Config;
     ///
     /// let config = Config::builder()
     ///     .model("claude-3-opus-20240229")  // Most capable
@@ -543,7 +543,7 @@ impl ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Config;
+    /// use claude_sdk_rs::core::Config;
     /// use std::path::PathBuf;
     ///
     /// let config = Config::builder()
@@ -564,7 +564,7 @@ impl ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Config;
+    /// use claude_sdk_rs::core::Config;
     ///
     /// let config = Config::builder()
     ///     .allowed_tools(vec![
@@ -588,7 +588,7 @@ impl ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::{Config, StreamFormat};
+    /// use claude_sdk_rs::core::{Config, StreamFormat};
     ///
     /// let config = Config::builder()
     ///     .stream_format(StreamFormat::Json)
@@ -608,7 +608,7 @@ impl ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Config;
+    /// use claude_sdk_rs::core::Config;
     ///
     /// let config = Config::builder()
     ///     .non_interactive(true)
@@ -628,7 +628,7 @@ impl ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Config;
+    /// use claude_sdk_rs::core::Config;
     ///
     /// let config = Config::builder()
     ///     .max_tokens(2048)  // Limit to 2K tokens
@@ -648,7 +648,7 @@ impl ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Config;
+    /// use claude_sdk_rs::core::Config;
     ///
     /// let config = Config::builder()
     ///     .timeout_secs(120)  // 2 minute timeout
@@ -668,7 +668,7 @@ impl ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Config;
+    /// use claude_sdk_rs::core::Config;
     ///
     /// let config = Config::builder()
     ///     .verbose(true)  // Enable verbose output
@@ -688,7 +688,7 @@ impl ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Config;
+    /// use claude_sdk_rs::core::Config;
     ///
     /// let config = Config::builder()
     ///     .continue_session()
@@ -708,7 +708,7 @@ impl ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Config;
+    /// use claude_sdk_rs::core::Config;
     ///
     /// let config = Config::builder()
     ///     .resume_session("session_123".to_string())
@@ -728,7 +728,7 @@ impl ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Config;
+    /// use claude_sdk_rs::core::Config;
     ///
     /// let config = Config::builder()
     ///     .append_system_prompt("Additionally, be concise in your responses.")
@@ -748,7 +748,7 @@ impl ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Config;
+    /// use claude_sdk_rs::core::Config;
     ///
     /// let config = Config::builder()
     ///     .disallowed_tools(vec![
@@ -771,7 +771,7 @@ impl ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Config;
+    /// use claude_sdk_rs::core::Config;
     ///
     /// let config = Config::builder()
     ///     .max_turns(10)
@@ -791,7 +791,7 @@ impl ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::Config;
+    /// use claude_sdk_rs::core::Config;
     ///
     /// let config = Config::builder()
     ///     .skip_permissions(false)  // Require permission prompts
@@ -814,7 +814,7 @@ impl ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::{Config, SecurityLevel};
+    /// use claude_sdk_rs::core::{Config, SecurityLevel};
     ///
     /// let config = Config::builder()
     ///     .security_level(SecurityLevel::Relaxed)
@@ -834,7 +834,7 @@ impl ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use claude_sdk_rs_core::{Config, StreamFormat};
+    /// use claude_sdk_rs::core::{Config, StreamFormat};
     ///
     /// let config = Config::builder()
     ///     .model("claude-3-sonnet-20240229")

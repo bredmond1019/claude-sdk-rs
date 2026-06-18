@@ -78,7 +78,7 @@
 //!         .system_prompt("You are a helpful coding assistant.")
 //!         .timeout_secs(60)
 //!         .stream_format(StreamFormat::Json)
-//!         .build();
+//!         .build()?;
 //!
 //!     let client = Client::new(config);
 //!
@@ -99,14 +99,14 @@
 //!
 //! ### Streaming Responses
 //! ```rust,no_run
-//! use claude_sdk_rs::{Client, Config, StreamFormat};
+//! use claude_sdk_rs::{Client, Config, Message, StreamFormat};
 //! use futures::StreamExt;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), claude_sdk_rs::Error> {
 //!     let client = Client::builder()
 //!         .stream_format(StreamFormat::StreamJson)
-//!         .build();
+//!         .build()?;
 //!
 //!     let mut stream = client
 //!         .query("Write a short story about a robot")
@@ -116,14 +116,9 @@
 //!     // Process streaming response
 //!     while let Some(message) = stream.next().await {
 //!         match message {
-//!             Ok(msg) => {
-//!                 if let Some(content) = msg.content {
-//!                     print!("{}", content);
-//!                 }
-//!                 if msg.stop_reason.is_some() {
-//!                     break;
-//!                 }
-//!             }
+//!             Ok(Message::Assistant { content, .. }) => print!("{}", content),
+//!             Ok(Message::Result { .. }) => break,
+//!             Ok(_) => {}
 //!             Err(e) => eprintln!("Stream error: {}", e),
 //!         }
 //!     }
@@ -139,7 +134,7 @@
 //! async fn main() -> Result<(), claude_sdk_rs::Error> {
 //!     let client = Client::builder()
 //!         .stream_format(StreamFormat::Json) // Needed for session metadata
-//!         .build();
+//!         .build()?;
 //!
 //!     // Start a conversation
 //!     let response1 = client
@@ -183,8 +178,8 @@
 //!         Err(Error::BinaryNotFound) => {
 //!             eprintln!("Claude CLI not found. Please install from https://claude.ai/code");
 //!         }
-//!         Err(Error::Timeout) => {
-//!             eprintln!("Request timed out. Consider increasing timeout_secs in Config");
+//!         Err(Error::Timeout(secs)) => {
+//!             eprintln!("Request timed out after {secs}s. Consider increasing timeout_secs in Config");
 //!         }
 //!         Err(e) => eprintln!("Other error: {}", e),
 //!     }

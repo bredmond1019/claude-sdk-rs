@@ -3,8 +3,8 @@
 //! This test suite covers all error scenarios, recovery mechanisms,
 //! and edge cases to ensure robust error handling in production.
 
-use claude_sdk_rs_core::{Config, Error, ErrorCode, StreamFormat};
-use claude_sdk_rs_runtime::{
+use claude_sdk_rs::core::{Config, Error, ErrorCode, StreamFormat};
+use claude_sdk_rs::runtime::{
     error_handling::{retry_with_backoff, ErrorContext, ProcessErrorDetails, RetryConfig},
     recovery::{
         CircuitBreaker, CircuitState, PartialResultRecovery, StreamReconnectionManager,

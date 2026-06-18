@@ -1,5 +1,5 @@
-use claude_sdk_rs_core::{Config, SessionId, StreamFormat};
-use claude_sdk_rs_runtime::{Client, MessageStream};
+use claude_sdk_rs::core::{Config, SessionId, StreamFormat};
+use claude_sdk_rs::runtime::{Client, MessageStream};
 
 #[cfg(test)]
 mod integration_tests {
@@ -102,7 +102,7 @@ mod integration_tests {
 
 #[cfg(test)]
 mod error_handling_tests {
-    use claude_sdk_rs_core::Error;
+    use claude_sdk_rs::core::Error;
 
     #[tokio::test]
     async fn test_binary_not_found_simulation() {
@@ -215,7 +215,7 @@ mod streaming_tests {
 
     #[tokio::test]
     async fn test_message_stream_creation() {
-        use claude_sdk_rs_core::Message;
+        use claude_sdk_rs::core::Message;
         use tokio::sync::mpsc;
 
         // Test that MessageStream can be created from a receiver
@@ -230,7 +230,7 @@ mod streaming_tests {
 
     #[tokio::test]
     async fn test_message_stream_collect() {
-        use claude_sdk_rs_core::{Message, MessageMeta};
+        use claude_sdk_rs::core::{Message, MessageMeta};
         use tokio::sync::mpsc;
 
         // Test that MessageStream can collect messages
@@ -260,11 +260,11 @@ mod streaming_tests {
                 duration_ms: None,
                 tokens_used: None,
             },
-            stats: claude_sdk_rs_core::ConversationStats {
+            stats: claude_sdk_rs::core::ConversationStats {
                 total_messages: 1,
                 total_cost_usd: 0.0,
                 total_duration_ms: 0,
-                total_tokens: claude_sdk_rs_core::TokenUsage {
+                total_tokens: claude_sdk_rs::core::TokenUsage {
                     input: 0,
                     output: 0,
                     total: 0,
@@ -283,7 +283,7 @@ mod streaming_tests {
 
     #[tokio::test]
     async fn test_concurrent_streaming_requests() {
-        use claude_sdk_rs_core::{Message, MessageMeta};
+        use claude_sdk_rs::core::{Message, MessageMeta};
         use tokio::sync::mpsc;
 
         // Test that multiple streaming requests can run concurrently
@@ -332,7 +332,7 @@ mod streaming_tests {
 
     #[tokio::test]
     async fn test_streaming_backpressure_handling() {
-        use claude_sdk_rs_core::{Message, MessageMeta};
+        use claude_sdk_rs::core::{Message, MessageMeta};
         use tokio::sync::mpsc;
         use tokio::time::{sleep, Duration};
 
@@ -388,7 +388,7 @@ mod streaming_tests {
 
     #[tokio::test]
     async fn test_streaming_error_propagation() {
-        use claude_sdk_rs_core::Error;
+        use claude_sdk_rs::core::Error;
         use tokio::sync::mpsc;
 
         // Test that errors are properly propagated through streams
@@ -413,7 +413,7 @@ mod streaming_tests {
 
     #[tokio::test]
     async fn test_streaming_timeout_immediate() {
-        use claude_sdk_rs_core::Error;
+        use claude_sdk_rs::core::Error;
         use tokio::sync::mpsc;
         use tokio::time::{timeout, Duration};
 
@@ -433,7 +433,7 @@ mod streaming_tests {
 
     #[tokio::test]
     async fn test_streaming_timeout_during_messages() {
-        use claude_sdk_rs_core::{Message, MessageMeta};
+        use claude_sdk_rs::core::{Message, MessageMeta};
         use tokio::sync::mpsc;
         use tokio::time::{sleep, timeout, Duration};
 
@@ -473,7 +473,7 @@ mod streaming_tests {
 
     #[tokio::test]
     async fn test_streaming_timeout_recovery() {
-        use claude_sdk_rs_core::{Error, Message, MessageMeta};
+        use claude_sdk_rs::core::{Error, Message, MessageMeta};
         use tokio::sync::mpsc;
         use tokio::time::{timeout, Duration};
 
@@ -513,7 +513,7 @@ mod streaming_tests {
 #[cfg(test)]
 mod concurrent_request_tests {
     use super::*;
-    use claude_sdk_rs_core::{Message, MessageMeta};
+    use claude_sdk_rs::core::{Message, MessageMeta};
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use tokio::sync::mpsc;
@@ -601,7 +601,7 @@ mod concurrent_request_tests {
 
     #[tokio::test]
     async fn test_concurrent_error_handling() {
-        use claude_sdk_rs_core::Error;
+        use claude_sdk_rs::core::Error;
 
         // Test concurrent streams with mixed success/error cases
         let mut handles = Vec::new();
@@ -662,7 +662,7 @@ mod concurrent_request_tests {
 #[cfg(test)]
 mod error_recovery_tests {
     use super::*;
-    use claude_sdk_rs_core::{Error, Message, MessageMeta};
+    use claude_sdk_rs::core::{Error, Message, MessageMeta};
     use tokio::sync::mpsc;
     use tokio::time::{sleep, Duration};
 

@@ -3,8 +3,8 @@
 //! This module contains comprehensive tests for all critical paths in the runtime library,
 //! targeting >95% test coverage of essential functionality.
 
-use claude_sdk_rs_core::*;
-use claude_sdk_rs_runtime::*;
+use claude_sdk_rs::core::*;
+use claude_sdk_rs::runtime::*;
 use std::time::Duration;
 use tokio::sync::mpsc;
 
@@ -175,7 +175,7 @@ mod streaming_tests {
 #[cfg(test)]
 mod error_handling_tests {
     use super::*;
-    use claude_sdk_rs_runtime::error_handling::*;
+    use claude_sdk_rs::runtime::error_handling::*;
 
     #[test]
     fn test_error_context_creation() {
@@ -368,7 +368,7 @@ mod error_handling_tests {
 #[cfg(test)]
 mod backpressure_tests {
     use super::*;
-    use claude_sdk_rs_runtime::backpressure::*;
+    use claude_sdk_rs::runtime::backpressure::*;
 
     #[test]
     fn test_backpressure_config_default() {
@@ -457,7 +457,7 @@ mod backpressure_tests {
 #[cfg(test)]
 mod stream_config_tests {
     use super::*;
-    use claude_sdk_rs_runtime::stream_config::*;
+    use claude_sdk_rs::runtime::stream_config::*;
 
     #[test]
     fn test_stream_config_default() {
@@ -493,7 +493,7 @@ mod stream_config_tests {
 #[cfg(test)]
 mod telemetry_tests {
     use super::*;
-    use claude_sdk_rs_runtime::telemetry;
+    use claude_sdk_rs::runtime::telemetry;
     use std::collections::HashMap;
 
     #[tokio::test]
@@ -545,7 +545,7 @@ mod telemetry_tests {
 #[cfg(test)]
 mod recovery_tests {
     use super::*;
-    use claude_sdk_rs_runtime::recovery::*;
+    use claude_sdk_rs::runtime::recovery::*;
 
     #[tokio::test]
     async fn test_recovery_binary_not_found() {

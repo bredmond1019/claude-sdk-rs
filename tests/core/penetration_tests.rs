@@ -4,7 +4,7 @@
 //! attack scenarios to validate the security of the Claude AI SDK. These tests
 //! follow ethical hacking practices and OWASP testing guidelines.
 
-use claude_sdk_rs_core::*;
+use claude_sdk_rs::core::*;
 use std::collections::HashMap;
 
 #[cfg(test)]

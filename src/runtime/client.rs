@@ -72,10 +72,10 @@ fn process_stream_json_line(line: &str, all_json: &mut Vec<serde_json::Value>, r
 ///
 /// Basic usage:
 /// ```rust,no_run
-/// # use crate::core::*;
-/// # use claude_sdk_rs_runtime::Client;
+/// # use claude_sdk_rs::core::*;
+/// # use claude_sdk_rs::runtime::Client;
 /// # #[tokio::main]
-/// # async fn main() -> crate::core::Result<()> {
+/// # async fn main() -> claude_sdk_rs::core::Result<()> {
 /// let client = Client::new(Config::default());
 /// let response = client.query("Hello").send().await?;
 /// println!("{}", response);
@@ -85,10 +85,10 @@ fn process_stream_json_line(line: &str, all_json: &mut Vec<serde_json::Value>, r
 ///
 /// With configuration:
 /// ```rust,no_run
-/// # use crate::core::*;
-/// # use claude_sdk_rs_runtime::Client;
+/// # use claude_sdk_rs::core::*;
+/// # use claude_sdk_rs::runtime::Client;
 /// # #[tokio::main]
-/// # async fn main() -> crate::core::Result<()> {
+/// # async fn main() -> claude_sdk_rs::core::Result<()> {
 /// let client = Client::builder()
 ///     .model("claude-3-opus-20240229")
 ///     .stream_format(StreamFormat::Json)
@@ -120,10 +120,10 @@ impl Client {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use crate::core::*;
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::core::*;
+    /// # use claude_sdk_rs::runtime::Client;
     /// # #[tokio::main]
-    /// # async fn main() -> crate::core::Result<()> {
+    /// # async fn main() -> claude_sdk_rs::core::Result<()> {
     /// let client = Client::new(Config::default());
     /// let response = client
     ///     .query("Explain Rust ownership")
@@ -144,10 +144,10 @@ impl Client {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use crate::core::*;
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::core::*;
+    /// # use claude_sdk_rs::runtime::Client;
     /// # #[tokio::main]
-    /// # async fn main() -> crate::core::Result<()> {
+    /// # async fn main() -> claude_sdk_rs::core::Result<()> {
     /// let client = Client::new(Config::default());
     /// let answer = client.send("What is 2 + 2?").await?;
     /// assert_eq!(answer.trim(), "4");
@@ -169,13 +169,13 @@ impl Client {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use crate::core::*;
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::core::*;
+    /// # use claude_sdk_rs::runtime::Client;
     /// # #[tokio::main]
-    /// # async fn main() -> crate::core::Result<()> {
+    /// # async fn main() -> claude_sdk_rs::core::Result<()> {
     /// let client = Client::builder()
     ///     .stream_format(StreamFormat::Json)
-    ///     .build();
+    ///     .build()?;
     ///
     /// let response = client.send_full("Hello").await?;
     /// println!("Content: {}", response.content);
@@ -226,8 +226,8 @@ impl Client {
 /// # Examples
 ///
 /// ```rust,no_run
-/// # use crate::core::*;
-/// # use claude_sdk_rs_runtime::Client;
+/// # use claude_sdk_rs::core::*;
+/// # use claude_sdk_rs::runtime::Client;
 /// let client = Client::builder()
 ///     .model("claude-3-sonnet-20240229")
 ///     .system_prompt("You are a helpful assistant")
@@ -267,7 +267,7 @@ impl ClientBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::runtime::Client;
     /// let client = Client::builder()
     ///     .system_prompt("You are a Rust expert")
     ///     .build();
@@ -282,7 +282,7 @@ impl ClientBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::runtime::Client;
     /// let client = Client::builder()
     ///     .model("claude-3-opus-20240229")
     ///     .build();
@@ -297,7 +297,7 @@ impl ClientBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::runtime::Client;
     /// let client = Client::builder()
     ///     .allowed_tools(vec!["bash".to_string(), "filesystem".to_string()])
     ///     .build();
@@ -312,8 +312,8 @@ impl ClientBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
-    /// # use crate::core::StreamFormat;
+    /// # use claude_sdk_rs::runtime::Client;
+    /// # use claude_sdk_rs::core::StreamFormat;
     /// let client = Client::builder()
     ///     .stream_format(StreamFormat::Json)
     ///     .build();
@@ -328,7 +328,7 @@ impl ClientBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::runtime::Client;
     /// let client = Client::builder()
     ///     .verbose(true)
     ///     .build();
@@ -343,7 +343,7 @@ impl ClientBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::runtime::Client;
     /// let client = Client::builder()
     ///     .timeout_secs(120)  // 2 minute timeout
     ///     .build();
@@ -361,7 +361,7 @@ impl ClientBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::runtime::Client;
     /// let client = Client::builder()
     ///     .continue_session()
     ///     .build();
@@ -379,7 +379,7 @@ impl ClientBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::runtime::Client;
     /// let client = Client::builder()
     ///     .resume_session("session_123")
     ///     .build();
@@ -397,7 +397,7 @@ impl ClientBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::runtime::Client;
     /// let client = Client::builder()
     ///     .disallowed_tools(vec!["bash".to_string(), "filesystem".to_string()])
     ///     .build();
@@ -415,7 +415,7 @@ impl ClientBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::runtime::Client;
     /// let client = Client::builder()
     ///     .skip_permissions(false)  // Require permission prompts
     ///     .build();
@@ -433,7 +433,7 @@ impl ClientBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::runtime::Client;
     /// let client = Client::builder()
     ///     .append_system_prompt("Additionally, be concise in your responses.")
     ///     .build();
@@ -451,7 +451,7 @@ impl ClientBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::runtime::Client;
     /// let client = Client::builder()
     ///     .max_turns(10)
     ///     .build();
@@ -468,8 +468,8 @@ impl ClientBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
-    /// # use crate::core::SecurityLevel;
+    /// # use claude_sdk_rs::runtime::Client;
+    /// # use claude_sdk_rs::core::SecurityLevel;
     /// let client = Client::builder()
     ///     .security_level(SecurityLevel::Relaxed)  // Allow more flexible input
     ///     .build();
@@ -484,8 +484,8 @@ impl ClientBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
-    /// # use crate::core::StreamFormat;
+    /// # use claude_sdk_rs::runtime::Client;
+    /// # use claude_sdk_rs::core::StreamFormat;
     /// let client = Client::builder()
     ///     .model("claude-3-sonnet-20240229")
     ///     .stream_format(StreamFormat::Json)
@@ -511,10 +511,10 @@ impl ClientBuilder {
 /// # Examples
 ///
 /// ```rust,no_run
-/// # use crate::core::*;
-/// # use claude_sdk_rs_runtime::Client;
+/// # use claude_sdk_rs::core::*;
+/// # use claude_sdk_rs::runtime::Client;
 /// # #[tokio::main]
-/// # async fn main() -> crate::core::Result<()> {
+/// # async fn main() -> claude_sdk_rs::core::Result<()> {
 /// # let client = Client::new(Config::default());
 /// // Simple query
 /// let response = client
@@ -525,7 +525,7 @@ impl ClientBuilder {
 /// // Query with session and custom format
 /// let response = client
 ///     .query("Continue the conversation")
-///     .session("my-session".to_string())
+///     .session(SessionId::new("my-session"))
 ///     .format(StreamFormat::Json)
 ///     .send_full()
 ///     .await?;
@@ -559,14 +559,14 @@ impl QueryBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use crate::core::*;
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::core::*;
+    /// # use claude_sdk_rs::runtime::Client;
     /// # #[tokio::main]
-    /// # async fn main() -> crate::core::Result<()> {
+    /// # async fn main() -> claude_sdk_rs::core::Result<()> {
     /// # let client = Client::new(Config::default());
     /// let response = client
     ///     .query("Remember this: the key is 42")
-    ///     .session("my-session".to_string())
+    ///     .session(SessionId::new("my-session"))
     ///     .send()
     ///     .await?;
     /// # Ok(())
@@ -585,10 +585,10 @@ impl QueryBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use crate::core::*;
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::core::*;
+    /// # use claude_sdk_rs::runtime::Client;
     /// # #[tokio::main]
-    /// # async fn main() -> crate::core::Result<()> {
+    /// # async fn main() -> claude_sdk_rs::core::Result<()> {
     /// # let client = Client::new(Config::default());
     /// let response = client
     ///     .query("What is the weather?")
@@ -611,10 +611,10 @@ impl QueryBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use crate::core::*;
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::core::*;
+    /// # use claude_sdk_rs::runtime::Client;
     /// # #[tokio::main]
-    /// # async fn main() -> crate::core::Result<()> {
+    /// # async fn main() -> claude_sdk_rs::core::Result<()> {
     /// # let client = Client::new(Config::default());
     /// let answer = client
     ///     .query("What is 2 + 2?")
@@ -636,10 +636,10 @@ impl QueryBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use crate::core::*;
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::core::*;
+    /// # use claude_sdk_rs::runtime::Client;
     /// # #[tokio::main]
-    /// # async fn main() -> crate::core::Result<()> {
+    /// # async fn main() -> claude_sdk_rs::core::Result<()> {
     /// # let client = Client::new(Config::default());
     /// let response = client
     ///     .query("Explain quantum computing")
@@ -667,11 +667,11 @@ impl QueryBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use crate::core::*;
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::core::*;
+    /// # use claude_sdk_rs::runtime::Client;
     /// # use futures::StreamExt;
     /// # #[tokio::main]
-    /// # async fn main() -> crate::core::Result<()> {
+    /// # async fn main() -> claude_sdk_rs::core::Result<()> {
     /// # let client = Client::new(Config::default());
     /// let mut stream = client
     ///     .query("Write a short story")
@@ -710,11 +710,11 @@ impl QueryBuilder {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # use crate::core::*;
-    /// # use claude_sdk_rs_runtime::Client;
+    /// # use claude_sdk_rs::core::*;
+    /// # use claude_sdk_rs::runtime::Client;
     /// # use serde::Deserialize;
     /// # #[tokio::main]
-    /// # async fn main() -> crate::core::Result<()> {
+    /// # async fn main() -> claude_sdk_rs::core::Result<()> {
     /// #[derive(Deserialize)]
     /// struct WeatherData {
     ///     temperature: f64,

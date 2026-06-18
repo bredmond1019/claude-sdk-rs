@@ -3,7 +3,7 @@
 //! These tests focus on the stable core functionality that should always work,
 //! providing a foundation for CI/CD reliability.
 
-use claude_sdk_rs_core::{Config, Error, StreamFormat};
+use claude_sdk_rs::core::{Config, Error, StreamFormat};
 use std::time::Duration;
 
 /// Test basic configuration creation and validation

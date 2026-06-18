@@ -4,7 +4,7 @@
 //! resistance to common security threats and ensures proper input validation,
 //! sanitization, and access control.
 
-use claude_sdk_rs_core::*;
+use claude_sdk_rs::core::*;
 
 #[cfg(test)]
 mod input_validation_tests {
@@ -419,7 +419,7 @@ mod access_control_tests {
 #[cfg(test)]
 mod data_sanitization_tests {
     use super::*;
-    use claude_sdk_rs_core::types::ClaudeResponse;
+    use claude_sdk_rs::core::types::ClaudeResponse;
     use serde_json::json;
 
     #[test]
