@@ -231,12 +231,12 @@ bench:
 .PHONY: bench-stream
 bench-stream:
 	@echo "$(GREEN)Running streaming benchmarks...$(NC)"
-	$(CARGO) bench --bench streaming_bench
+	$(CARGO) bench --bench performance stream
 
 .PHONY: bench-client
 bench-client:
 	@echo "$(GREEN)Running client benchmarks...$(NC)"
-	$(CARGO) bench --bench client_bench
+	$(CARGO) bench --bench performance client
 
 .PHONY: bench-compare
 bench-compare:
