@@ -123,5 +123,4 @@ Each example builds on previous concepts while introducing new functionality.
 
 The examples also include:
 - **Interactive shell script** (`run_examples.sh`) for guided exploration
-- **Library comparison guide** (`LIBRARY_COMPARISON.md`) explaining architecture
 - **Comprehensive tests** validating example correctness

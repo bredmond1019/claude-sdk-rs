@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script to run all examples demonstrating claude-ai and claude-interactive
+# Script to run all examples demonstrating the claude-sdk-rs SDK
 
 echo "🚀 Claude AI Examples Runner"
 echo "=========================="

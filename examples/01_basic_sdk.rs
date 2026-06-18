@@ -6,8 +6,6 @@
 //! - Send simple queries
 //! - Handle responses
 //! - Work with different response formats
-//!
-//! This uses ONLY the `claude-sdk-rs` crate, not `claude-interactive`.
 
 use claude_sdk_rs::{Client, StreamFormat};
 

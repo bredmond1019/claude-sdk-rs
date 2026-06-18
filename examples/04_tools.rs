@@ -233,29 +233,26 @@ mod safe_patterns {
 
    The current date is: Mon Jan 15 14:30:22 PST 2024
    You are logged in as: brandon
-   Current directory: /Users/brandon/Documents/Projects/claude-sdk-rs/claude-interactive
+   Current directory: /Users/brandon/Documents/Projects/claude-sdk-rs
 
 2. File Operations
    Reading and analyzing files
 
    Analysis:
-   I found several Rust files in this project. After examining them, this appears to be a Rust workspace project called "claude-sdk-rs" that provides:
+   I found several Rust files in this project. After examining them, this appears to be a Rust library crate called "claude-sdk-rs" that provides:
 
-   1. A core SDK for interacting with Claude AI (`claude-sdk-rs` crate)
-   2. An interactive CLI tool (`claude-sdk-rs-interactive`)
-   3. Core types and configurations (`claude-sdk-rs-core`)
-   4. Runtime implementation (`claude-sdk-rs-runtime`)
-   5. Additional features like MCP support and macros
+   1. `core` — Config, types, errors, messages, and sessions
+   2. `runtime` — the Client, query builder, process spawning, and streaming
 
-   The project structure follows Rust workspace conventions with multiple crates providing different functionality for working with Claude AI programmatically.
+   The crate is a focused, async SDK that wraps the Claude Code CLI binary for use from Rust.
 
 3. Development Workflow
    Using tools for development tasks
 
    Checking project status...
    Status:
-   You're currently on the `claude-interactive` branch. There is one modified file:
-   - `claude-ai-interactive/src/analytics/analytics_test.rs` (staged for commit)
+   You're currently on the `main` branch. There is one modified file:
+   - `src/runtime/client.rs` (staged for commit)
 
    The working directory is otherwise clean.
 

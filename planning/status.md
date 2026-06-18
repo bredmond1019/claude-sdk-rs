@@ -3,7 +3,7 @@
 > Tracks work completed and remaining for the portfolio split-and-trim. See
 > `planning/context.md` for why, and `planning/plans/split-and-trim-for-portfolio.md` for how.
 
-**Current phase:** Phase 3 complete — ready to begin Phase 4 (examples audit).
+**Current phase:** Phase 4 complete — ready to begin Phase 5 (docs trim).
 **Branch:** `split-and-trim-for-portfolio`
 
 ## Completed
@@ -29,7 +29,7 @@ Ordered per the plan; check off as completed.
   - **Correction to plan §2:** `num_cpus` + `libc` are USED in `src/runtime/error_handling.rs` — kept (plan wrongly listed them for removal).
   - Fixed a pre-existing `sqlite` bug (missing `mode=rwc`) surfaced once `--all-features` could compile; 4 sqlite tests now pass (149 total, was 145).
 - [x] 3. Rewrite `src/lib.rs`: dropped `cli`/`mcp` modules + re-exports (incl. `McpConfig`/`McpServer`); rewrote crate doc to core + runtime + optional `sqlite` only; removed cli/analytics/mcp/full feature sections, the phantom `analytics` feature, the CLI-usage section, and stale example list. Build green (default + `sqlite`).
-- [ ] 4. Examples audit: remove `cli_interactive.rs` / `cli_analytics.rs`; verify `05_complete_app.rs` + `advanced_permissions.rs`; trim example docs + `run_examples.sh`
+- [x] 4. Examples audit: removed `cli_interactive.rs` / `cli_analytics.rs` (gated on removed features), the non-functional `session_persistence.rs` stub, and the 5.2k-line `REAL_WORLD_EXAMPLES.md`; verified `05_complete_app.rs` + `advanced_permissions.rs` use only public API (kept); scrubbed `claude-interactive` / `claude_sdk_rs_core` drift + dangling `LIBRARY_COMPARISON.md` ref; fixed `run_examples.sh`. `cargo build --examples` clean. Report: `planning/phase4/implement.md`
 - [ ] 5. Docs trim: remove/fold `GETTING_STARTED`, `QUICK_START`, `MIGRATION`, `RELEASE_NOTES`, `ROADMAP`, oversized `TROUBLESHOOTING`; prune `docs/` (`FEATURE_FLAGS`, `PERFORMANCE`, dup `MIGRATION`/`TROUBLESHOOTING`) and cli/mcp tutorials
 - [ ] 6. Naming consistency: replace `claude-interactive` / `crate_interactive` → `claude-sdk-rs`
 - [ ] 7. Write modern `README.md` (draft ready in plan §7)
@@ -71,3 +71,15 @@ Ordered per the plan; check off as completed.
   pre-existing warnings). The 83 doctest failures are unchanged and confirmed to be the
   pre-existing naming drift (`claude_sdk_rs_core` / `claude_sdk_rs_runtime` stale workspace
   crate names in doc examples) — to be fixed in §6, not introduced here.
+- **2026-06-18** — Phase 4 complete. Examples audit: removed `cli_interactive.rs` and
+  `cli_analytics.rs` (gated on the removed `cli`/`analytics` features), the non-functional
+  `session_persistence.rs` stub (printed "cannot be run", referenced `claude_sdk_rs_core`), and
+  the 5,211-line aspirational `REAL_WORLD_EXAMPLES.md` (untested code with non-existent deps +
+  a clap CLI section contradicting the library-only story). Verified `05_complete_app.rs` and
+  `advanced_permissions.rs` use only public SDK API → kept. Fixed examples-local naming drift
+  (`claude-interactive` disclaimers in `01`/`02`; old-workspace sample output in `04_tools.rs`;
+  `run_examples.sh` header) and the dangling `LIBRARY_COMPARISON.md` link in `examples/README.md`.
+  13 examples survive; `cargo build --examples` compiles clean (pre-existing dead-code warnings
+  only); grep for stale refs in `examples/` → none. Two deviations from plan §4 keep-list
+  (removed `session_persistence.rs` and `REAL_WORLD_EXAMPLES.md` rather than trimming) with
+  rationale in the report. Report: `planning/phase4/implement.md`.

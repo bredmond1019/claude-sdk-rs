@@ -5,8 +5,6 @@
 //! - Use session IDs to maintain context
 //! - Track conversations across multiple queries
 //! - Manage session state manually
-//!
-//! This uses ONLY the `claude-sdk-rs` crate, not `claude-interactive`.
 
 use claude_sdk_rs::{Client, SessionId};
 use std::collections::HashMap;
