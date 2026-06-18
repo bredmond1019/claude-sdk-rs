@@ -3,7 +3,7 @@
 > Tracks work completed and remaining for the portfolio split-and-trim. See
 > `planning/context.md` for why, and `planning/plans/split-and-trim-for-portfolio.md` for how.
 
-**Current phase:** Phase 5 complete — ready to begin Phase 6 (naming consistency).
+**Current phase:** Phase 5 complete (+ post-review fixup) — ready to begin Phase 6 (naming consistency).
 **Branch:** `split-and-trim-for-portfolio`
 
 ## Completed
@@ -83,6 +83,11 @@ Ordered per the plan; check off as completed.
   only); grep for stale refs in `examples/` → none. Two deviations from plan §4 keep-list
   (removed `session_persistence.rs` and `REAL_WORLD_EXAMPLES.md` rather than trimming) with
   rationale in the report. Report: `planning/phase4/implement.md`.
+- **2026-06-18** — Phase 5 post-review fixup. Patched three stale entries in `docs/TESTING.md`
+  caught by the phase review (`planning/phase5/report.md`): "workspace … all crates" framing on
+  lines 3 and 16 → single-crate language; "1,172+ tests" count on lines 335 and 359 → "~149
+  tests" (actual passing count from `cargo test --all-features --lib --tests`). Phase 5 report
+  grade: WARN → issues now resolved.
 - **2026-06-18** — Phase 5 complete. Docs trim. Removed root `GETTING_STARTED`, `QUICK_START`,
   `MIGRATION`, `RELEASE_NOTES`, `ROADMAP`, and the 1,313-line `TROUBLESHOOTING` (folded into a
   new ~90-line `docs/TROUBLESHOOTING.md` FAQ organized by real `Error` variants, using the

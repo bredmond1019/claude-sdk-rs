@@ -1,6 +1,6 @@
 # Testing Guide for claude-sdk-rs
 
-This document describes the testing strategy, organization, and best practices for the claude-sdk-rs workspace.
+This document describes the testing strategy, organization, and best practices for the claude-sdk-rs library crate.
 
 ## Table of Contents
 
@@ -13,7 +13,7 @@ This document describes the testing strategy, organization, and best practices f
 
 ## Test Organization
 
-The claude-sdk-rs workspace follows a consistent testing structure across all crates:
+The claude-sdk-rs single-crate library follows a consistent testing structure:
 
 ### Directory Structure
 
@@ -332,7 +332,7 @@ mod tests {
 
 ### Current Coverage Status
 
-*Note: Full coverage reports may require extended execution time due to the comprehensive test suite (1,172+ tests). For development, use focused testing on specific modules.*
+*Note: Full coverage reports may require extended execution time due to the comprehensive test suite (~149 tests). For development, use focused testing on specific modules.*
 
 ### Checking Coverage
 
@@ -356,7 +356,7 @@ See `tarpaulin.toml` for coverage settings:
 - **Failure threshold:** 80% minimum coverage
 - **Excluded files:** Tests, examples, benchmarks, build scripts
 
-**Note:** Due to the extensive test suite (1,172+ tests), coverage generation may take several minutes. For faster feedback during development, run coverage on specific modules:
+**Note:** Due to the extensive test suite (~149 tests), coverage generation may take several minutes. For faster feedback during development, run coverage on specific modules:
 
 ```bash
 # Run coverage on core module only
