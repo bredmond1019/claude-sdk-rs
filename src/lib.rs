@@ -1,78 +1,34 @@
 //! # claude-sdk-rs - Rust SDK for Claude Code
 //!
-//! A comprehensive, type-safe, async-first Rust SDK that provides both programmatic access
-//! to Claude AI and CLI interactive features. This crate transforms the Claude Code CLI tool
-//! into a powerful library while also offering standalone CLI capabilities.
+//! A type-safe, async-first Rust SDK that wraps the [Claude Code](https://docs.claude.com/claude-code)
+//! CLI binary in a fluent, strongly-typed API. It gives you structured responses, streaming,
+//! session continuity, and tool control from Rust — all async on tokio.
+//!
+//! This is a pure library crate. It shells out to the `claude` binary (`claude -p`) and maps a
+//! typed [`Config`] onto CLI flags (`--output-format`, `--model`, `--system-prompt`, `--resume`,
+//! allowed/disallowed tool lists, …), then parses the structured output back into Rust types.
+//! The core mechanism lives in `src/runtime/process.rs`.
 //!
 //! ## Features
 //!
-//! claude-sdk-rs is designed with modularity in mind, using feature flags to provide
-//! only the functionality you need:
-//!
-//! ### Core Features (Always Available)
+//! ### Always available
 //! - **Async-first API**: Built on tokio for high-performance async operations
-//! - **Type-safe responses**: Structured data types for all API responses
+//! - **Type-safe responses**: Structured data types for all responses
 //! - **Multiple response formats**: Text, JSON, and streaming JSON support
 //! - **Session management**: Persistent conversation contexts
-//! - **Error handling**: Comprehensive error types with detailed messages
-//! - **Configuration**: Flexible configuration with builder pattern
+//! - **Error handling**: Comprehensive error types with rich context and telemetry
+//! - **Configuration**: Flexible configuration with a builder pattern
 //!
-//! ### Optional Features
-//!
-//! #### `cli` - Command Line Interface
-//! Enables the CLI binary and interactive features:
+//! ### Optional: `sqlite` - SQLite Storage Backend
+//! Adds SQLite-backed persistent session storage:
 //! ```toml
 //! [dependencies]
-//! claude-sdk-rs = { version = "1.0", features = ["cli"] }
-//! ```
-//! - Interactive command-line interface
-//! - Command parsing and execution
-//! - Configuration management
-//! - Session switching and management
-//!
-//! #### `analytics` - Usage Analytics and Metrics
-//! Includes the CLI feature plus analytics capabilities:
-//! ```toml
-//! [dependencies]
-//! claude-sdk-rs = { version = "1.0", features = ["analytics"] }
-//! ```
-//! - Usage tracking and metrics collection
-//! - Cost analysis and reporting
-//! - Performance monitoring
-//! - Interactive dashboards
-//! - Data export capabilities
-//!
-//! #### `mcp` - Model Context Protocol
-//! Enables MCP server and client functionality:
-//! ```toml
-//! [dependencies]
-//! claude-sdk-rs = { version = "1.0", features = ["mcp"] }
-//! ```
-//! - MCP server implementation
-//! - Tool integration capabilities
-//! - External service connections
-//! - Protocol message handling
-//!
-//! #### `sqlite` - SQLite Storage Backend
-//! Adds SQLite support for persistent storage:
-//! ```toml
-//! [dependencies]
-//! claude-sdk-rs = { version = "1.0", features = ["sqlite"] }
-//! ```
-//! - Persistent session storage
-//! - Query history and analytics
-//! - Configuration persistence
-//!
-//! #### `full` - All Features Enabled
-//! Convenience feature that enables everything:
-//! ```toml
-//! [dependencies]
-//! claude-sdk-rs = { version = "1.0", features = ["full"] }
+//! claude-sdk-rs = { version = "2", features = ["sqlite"] }
 //! ```
 //!
 //! ## Architecture Overview
 //!
-//! The SDK is organized into several core modules:
+//! The SDK is organized into two modules:
 //!
 //! ### Core Module (`core`)
 //! Contains fundamental types and configuration:
@@ -88,18 +44,6 @@
 //! - [`QueryBuilder`] - Fluent query construction
 //! - [`MessageStream`] - Streaming response handling
 //!
-//! ### CLI Module (`cli`) - *Feature Gated*
-//! Command-line interface implementation:
-//! - Interactive shell and command processing
-//! - Configuration management utilities
-//! - Session switching and management
-//!
-//! ### MCP Module (`mcp`) - *Feature Gated*
-//! Model Context Protocol implementation:
-//! - Server and client implementations
-//! - Tool integration framework
-//! - External service connections
-//!
 //! ## Quick Start Examples
 //!
 //! ### Basic SDK Usage
@@ -110,13 +54,13 @@
 //! async fn main() -> Result<(), claude_sdk_rs::Error> {
 //!     // Create client with default configuration
 //!     let client = Client::new(Config::default());
-//!     
+//!
 //!     // Send a simple query
 //!     let response = client
 //!         .query("Write a hello world program in Rust")
 //!         .send()
 //!         .await?;
-//!     
+//!
 //!     println!("Claude's response: {}", response);
 //!     Ok(())
 //! }
@@ -137,13 +81,13 @@
 //!         .build();
 //!
 //!     let client = Client::new(config);
-//!     
+//!
 //!     // Get full response with metadata
 //!     let response = client
 //!         .query("Explain Rust ownership")
 //!         .send_full()
 //!         .await?;
-//!     
+//!
 //!     println!("Response: {}", response.content);
 //!     if let Some(metadata) = response.metadata {
 //!         println!("Cost: ${:.6}", metadata.cost_usd.unwrap_or(0.0));
@@ -163,7 +107,7 @@
 //!     let client = Client::builder()
 //!         .stream_format(StreamFormat::StreamJson)
 //!         .build();
-//!     
+//!
 //!     let mut stream = client
 //!         .query("Write a short story about a robot")
 //!         .stream()
@@ -196,21 +140,21 @@
 //!     let client = Client::builder()
 //!         .stream_format(StreamFormat::Json) // Needed for session metadata
 //!         .build();
-//!     
+//!
 //!     // Start a conversation
 //!     let response1 = client
 //!         .query("Hello! My name is Alice and I'm learning Rust.")
 //!         .send_full()
 //!         .await?;
-//!     
+//!
 //!     println!("Response 1: {}", response1.content);
-//!     
+//!
 //!     // Continue in the same session - Claude remembers context
 //!     let response2 = client
 //!         .query("What's my name?")
 //!         .send_full()
 //!         .await?;
-//!     
+//!
 //!     println!("Response 2: {}", response2.content);
 //!     // Should respond with "Alice"
 //!     Ok(())
@@ -227,7 +171,7 @@
 //! #[tokio::main]
 //! async fn main() {
 //!     let client = Client::new(Config::default());
-//!     
+//!
 //!     match client.query("Hello").send().await {
 //!         Ok(response) => println!("Success: {}", response),
 //!         Err(Error::ProcessError(e)) => {
@@ -247,24 +191,6 @@
 //! }
 //! ```
 //!
-//! ## CLI Usage
-//!
-//! When the `cli` feature is enabled, you can use the binary:
-//!
-//! ```bash
-//! # Install with CLI features
-//! cargo install claude-sdk-rs --features cli
-//!
-//! # Interactive mode
-//! claude-sdk-rs
-//!
-//! # Direct query
-//! claude-sdk-rs query "What is Rust?"
-//!
-//! # With analytics (requires 'analytics' feature)
-//! claude-sdk-rs analytics dashboard
-//! ```
-//!
 //! ## Performance and Best Practices
 //!
 //! ### Configuration Optimization
@@ -279,7 +205,7 @@
 //! - Implement retry logic for transient failures
 //! - Use appropriate timeout values
 //!
-//! ### Memory Management
+//! ### Resource Management
 //! - Reuse [`Client`] instances when possible
 //! - Process streaming responses incrementally for large outputs
 //! - Use [`Config::builder()`] to avoid unnecessary allocations
@@ -299,13 +225,13 @@
 //! ## Examples
 //!
 //! For more comprehensive examples, see the `examples/` directory:
-//! - `basic_usage.rs` - Simple SDK usage patterns
-//! - `streaming.rs` - Real-time streaming responses
-//! - `error_handling.rs` - Comprehensive error handling
+//! - `01_basic_sdk.rs` - Simple SDK usage patterns
+//! - `02_sdk_sessions.rs` - Multi-turn conversations
+//! - `03_streaming.rs` - Real-time streaming responses
+//! - `04_tools.rs` - Tool permissions and control
 //! - `configuration.rs` - Advanced configuration options
-//! - `session_management.rs` - Multi-turn conversations
-//! - `cli_interactive.rs` - CLI interactive features (requires `cli` feature)
-//! - `cli_analytics.rs` - Analytics and metrics (requires `analytics` feature)
+//! - `error_handling.rs` - Comprehensive error handling
+//! - `session_persistence.rs` - SQLite-based session storage (requires `sqlite` feature)
 
 #![deny(clippy::all)]
 #![warn(clippy::pedantic)]
@@ -315,16 +241,9 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
 
-// Core modules (always available)
+// Core modules
 pub mod core;
 pub mod runtime;
-
-// Feature-gated modules
-#[cfg(feature = "mcp")]
-pub mod mcp;
-
-#[cfg(feature = "cli")]
-pub mod cli;
 
 // Re-export core types for convenience
 pub use crate::core::{
@@ -334,10 +253,6 @@ pub use crate::core::{
 
 // Re-export runtime types
 pub use crate::runtime::{Client, MessageStream, QueryBuilder};
-
-// Re-export MCP types when feature is enabled
-#[cfg(feature = "mcp")]
-pub use crate::mcp::{McpConfig, McpServer};
 
 /// Prelude module for convenient imports
 pub mod prelude {
