@@ -70,26 +70,27 @@ Tests embedded in documentation comments.
 ```rust
 /// # Example
 /// ```
-/// use claude_ai::Client;
+/// use claude_sdk_rs::Client;
 /// let client = Client::new(Default::default());
 /// ```
 ```
 
-### Test Count by Module
+### Test Coverage by Area
 
-**Total Test Functions: 1,172** (as of 2025-06-19)
+The suite covers the two library modules — `core` and `runtime` — plus integration,
+security, and property tests under `tests/`.
 
-| Module | Test Count | Primary Test Files |
-|--------|------------|-------------------|
-| Core Configuration | 58 | `src/core/config_test.rs` |
-| CLI History | 75 | `src/cli/history/store_test.rs` |
-| CLI Commands | 57 | `src/cli/cli/commands_test.rs` |
-| Runtime Integration | 31 | `tests/runtime/integration_tests.rs` |
-| Critical Path | 91 | `tests/core/critical_path_tests.rs`, `tests/runtime/critical_path_tests.rs` |
-| Analytics & Profiling | 68 | Various analytics test files |
-| Error Handling | 24 | Core and runtime error tests |
-| Session Management | 33 | `src/core/session_test.rs` |
-| **Other Modules** | 735+ | Various test files across MCP, CLI, and interactive features | |
+| Area | Primary Test Files |
+|------|--------------------|
+| Core Configuration | `src/core/config_test.rs`, `src/core/new_cli_flags_test.rs` |
+| Session Management | `src/core/session_test.rs`, `src/core/session/persistence_tests.rs` |
+| Runtime / Process | `src/runtime/process_tests.rs`, `tests/runtime/process_tests.rs` |
+| Runtime Integration | `tests/runtime/integration_tests.rs` |
+| Critical Path | `tests/core/critical_path_tests.rs`, `tests/runtime/critical_path_tests.rs` |
+| Error Handling | `tests/runtime/error_handling_tests.rs` |
+| Security / Penetration | `tests/core/security_tests.rs`, `tests/core/penetration_tests.rs` |
+| Property-based | `tests/core/property_tests.rs` |
+| Chaos / Reliability | `tests/runtime/chaos_engineering_tests.rs`, `tests/core/ci_reliability_test.rs` |
 
 ## Running Tests
 
@@ -97,10 +98,10 @@ Tests embedded in documentation comments.
 
 ```bash
 # Run all tests
-cargo test --workspace
+cargo test
 
-# Run tests for specific crate
-cargo test -p claude-sdk-rs-core
+# Run with all features (includes the sqlite session store)
+cargo test --all-features
 
 # Run specific test
 cargo test test_config_default
@@ -452,7 +453,5 @@ This runs:
 
 For more information, see:
 - [CONTRIBUTING.md](../CONTRIBUTING.md) - Contribution guidelines
-- [tests/TEST_INVENTORY.md](../tests/TEST_INVENTORY.md) - Complete test listing
-- [PERFORMANCE.md](PERFORMANCE.md) - Performance testing and benchmarks
 - [SECURITY.md](SECURITY.md) - Security testing guidelines
 - [Rust Testing Book](https://doc.rust-lang.org/book/ch11-00-testing.html) - Official Rust testing guide
