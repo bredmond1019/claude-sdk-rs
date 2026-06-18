@@ -3,7 +3,7 @@
 > Tracks work completed and remaining for the portfolio split-and-trim. See
 > `planning/context.md` for why, and `planning/plans/split-and-trim-for-portfolio.md` for how.
 
-**Current phase:** Phase 6 reviewed (PASS) — ready to begin Phase 7 (write modern `README.md`).
+**Current phase:** Phases 1–9 complete — all execution done. Next: run the verification gate below.
 **Branch:** `split-and-trim-for-portfolio`
 
 ## Completed
@@ -39,9 +39,9 @@ Ordered per the plan; check off as completed.
   (was 2/83.)** Found: `tests/core/**` + `tests/runtime/**` are orphaned (no `[[test]]` wiring) —
   grep-clean but not compiled; left as a follow-up. Report: `planning/phase6/implement.md`;
   review: `planning/phase6/report.md` — **PASS**
-- [ ] 7. Write modern `README.md` (draft ready in plan §7)
-- [ ] 8. Write `CLAUDE.md` (draft ready in plan §8)
-- [ ] 9. CHANGELOG `2.0.0` entry (BREAKING: removed `cli`, `analytics`, `mcp`)
+- [x] 7. Write modern `README.md` (replaced the old 458-line cli/mcp/analytics README with a focused ~140-line SDK README; all examples verified against the real public API in `src/lib.rs`)
+- [x] 8. Write `CLAUDE.md` (repo guidance for Claude Code; based on plan §8, layout + `ErrorContext`/`CLAUDE_BINARY`/stdin-dispatch references verified against source)
+- [x] 9. CHANGELOG `2.0.0` entry (BREAKING: removed `cli`, `analytics`, `mcp`, `full`; features now `default = []` + `sqlite`; added a migration note)
 
 ## Verification gate (run after execution)
 - [ ] `cargo build` + `cargo build --features sqlite` clean
@@ -101,6 +101,29 @@ Ordered per the plan; check off as completed.
   noted: orphaned `tests/core/**` + `tests/runtime/**` (never compiled by Cargo, follow-up before
   final gate) and pre-existing `missing_docs` warning on `sqlite` build (final clippy gate).
   Report: `planning/phase6/report.md`.
+- **2026-06-18** — Phase 9 complete. Added a `[2.0.0] - 2026-06-18` CHANGELOG entry above `[1.0.1]`:
+  documents the focused library refocus and the breaking removals (`cli` + binary target,
+  `analytics`, `mcp` module + `McpConfig`/`McpServer` re-exports, `full`), the new `default = []` +
+  `sqlite` feature set, a migration note (core-only users → `"2"` with no code changes; cli/mcp/
+  analytics users → pin `1.x`), and an internal-changes summary (dep slim-down, sqlite `mode=rwc`
+  fix, docs/README/CLAUDE.md). Version confirmed `2.0.0` in `Cargo.toml`. All nine execution phases
+  are now done — only the verification gate remains.
+- **2026-06-18** — Phase 8 complete. Wrote `CLAUDE.md` (repo guidance for Claude Code) from plan §8.
+  Verified every concrete reference against source before committing it to the file: `ErrorContext`
+  (`src/runtime/error_handling.rs:16`), the `CLAUDE_BINARY` override (`src/runtime/process.rs:23`),
+  and the stdin-vs-arg dispatch (`src/runtime/process.rs:131`). Adjusted the draft's git-hooks line
+  to name both `.pre-commit-config.yaml` and `.githooks/` (both tracked), used the `--all-features`
+  clippy invocation to match the verification gate, and added the explicit no-`Co-Authored-By` commit
+  rule. Next: §9 CHANGELOG `2.0.0` entry.
+- **2026-06-18** — Phase 7 complete. Replaced the stale 458-line root `README.md` (which still
+  documented the removed cli/mcp/analytics features, `claude-interactive` naming, and a phantom
+  `analytics` flag) with a focused ~140-line SDK README based on plan §7. Corrected three errors in
+  the plan's draft against the verified public API in `src/lib.rs`: (1) the streaming example yields
+  typed `Message` variants, not string chunks — used the `match Message::Assistant { content, .. }`
+  pattern, not `print!("{}", chunk?)`; (2) `Config::builder()`/`Client::builder()` `.build()` returns
+  a `Result`, so examples use `.build()?`; (3) used the CLI model alias `"sonnet"` instead of the
+  stale `claude-3-sonnet-20240229` id. Grep for stale refs (`claude-interactive`/`analytics`/`mcp`/
+  `claude_sdk_rs_core`) in README → clean. Next: §8 `CLAUDE.md`, §9 CHANGELOG.
 - **2026-06-18** — Phase 5 complete. Docs trim. Removed root `GETTING_STARTED`, `QUICK_START`,
   `MIGRATION`, `RELEASE_NOTES`, `ROADMAP`, and the 1,313-line `TROUBLESHOOTING` (folded into a
   new ~90-line `docs/TROUBLESHOOTING.md` FAQ organized by real `Error` variants, using the

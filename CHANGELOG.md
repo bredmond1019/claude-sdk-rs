@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-06-18
+
+### 🎯 Focused Library SDK
+
+`claude-sdk-rs` is now a focused, pure-library Claude SDK: a type-safe, async wrapper
+around the `claude` CLI binary. The interactive CLI, analytics platform, and MCP
+subsystem have been removed so the crate tells one coherent story — `core` + `runtime`.
+
+### ⚠️ Breaking Changes
+
+- **Removed the `cli` feature and the binary target.** The interactive CLI application,
+  cost/history tracking, and command execution layer are gone. The crate no longer ships
+  a `claude-sdk-rs` binary; it is library-only.
+- **Removed the `analytics` feature.** Dashboards, profiling, and time-series/streaming
+  "optimizers" have been removed. (This feature was also previously documented but never
+  actually declared in `[features]`.)
+- **Removed the `mcp` feature and module.** The Model Context Protocol workflow engine and
+  the HelpScout/Slack/Notion clients have been removed — they were an unrelated project.
+- **Removed the `full` feature.** With the subsystems gone there is nothing left for it to
+  aggregate.
+- **Feature set is now `default = []` and `sqlite`.** Optional SQLite-backed session
+  persistence remains available via `features = ["sqlite"]`.
+- Public re-exports tied to the removed modules (e.g. `McpConfig`, `McpServer`) are gone.
+
+### Migration
+
+- If you used only the core SDK (`Client`, `Config`, `query`/`send`/`stream`, sessions),
+  no code changes are required — update your dependency to `claude-sdk-rs = "2"`.
+- If you depended on the `cli`, `analytics`, `mcp`, or `full` features, pin to `1.x`; those
+  subsystems are not part of the 2.x library.
+
+### 📦 Internal
+
+- Slimmed dependencies to only those used by `core`/`runtime` (plus optional `sqlx` for
+  `sqlite`); dropped ~30 cli/mcp-only crates.
+- Fixed a latent SQLite connection bug (missing `mode=rwc`) surfaced once `--all-features`
+  could compile.
+- Trimmed documentation and examples to match the library-only surface; rewrote `README.md`
+  and added a `CLAUDE.md`.
+
 ## [1.0.1] - 2025-06-21
 
 ### 🛡️ Security Enhancement Release
