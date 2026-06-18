@@ -3,7 +3,7 @@
 > Tracks work completed and remaining for the portfolio split-and-trim. See
 > `planning/context.md` for why, and `planning/plans/split-and-trim-for-portfolio.md` for how.
 
-**Current phase:** Phase 6 complete — ready to begin Phase 7 (write modern `README.md`).
+**Current phase:** Phase 6 reviewed (PASS) — ready to begin Phase 7 (write modern `README.md`).
 **Branch:** `split-and-trim-for-portfolio`
 
 ## Completed
@@ -37,7 +37,8 @@ Ordered per the plan; check off as completed.
   doctest API drift this uncovered (builder `.build()?`, `Error::Timeout(_)`, `Message` enum
   matching, `SessionId::new`, `Bash(ls)` cli format, `TokenUsage.total`). **Doctests now 85/0
   (was 2/83.)** Found: `tests/core/**` + `tests/runtime/**` are orphaned (no `[[test]]` wiring) —
-  grep-clean but not compiled; left as a follow-up. Report: `planning/phase6/implement.md`
+  grep-clean but not compiled; left as a follow-up. Report: `planning/phase6/implement.md`;
+  review: `planning/phase6/report.md` — **PASS**
 - [ ] 7. Write modern `README.md` (draft ready in plan §7)
 - [ ] 8. Write `CLAUDE.md` (draft ready in plan §8)
 - [ ] 9. CHANGELOG `2.0.0` entry (BREAKING: removed `cli`, `analytics`, `mcp`)
@@ -94,6 +95,12 @@ Ordered per the plan; check off as completed.
   lines 3 and 16 → single-crate language; "1,172+ tests" count on lines 335 and 359 → "~149
   tests" (actual passing count from `cargo test --all-features --lib --tests`). Phase 5 report
   grade: WARN → issues now resolved.
+- **2026-06-18** — Phase 6 review complete. Grade: PASS. All claims in `planning/phase6/implement.md`
+  independently verified: `cargo test --doc --all-features` confirmed 85/0 live; unit suite 149/0;
+  stale-name grep empty across all shipping files; both default + `sqlite` builds clean. Open items
+  noted: orphaned `tests/core/**` + `tests/runtime/**` (never compiled by Cargo, follow-up before
+  final gate) and pre-existing `missing_docs` warning on `sqlite` build (final clippy gate).
+  Report: `planning/phase6/report.md`.
 - **2026-06-18** — Phase 5 complete. Docs trim. Removed root `GETTING_STARTED`, `QUICK_START`,
   `MIGRATION`, `RELEASE_NOTES`, `ROADMAP`, and the 1,313-line `TROUBLESHOOTING` (folded into a
   new ~90-line `docs/TROUBLESHOOTING.md` FAQ organized by real `Error` variants, using the
