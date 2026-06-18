@@ -57,8 +57,6 @@ fn is_prime(n: u32) -> bool {
 
 /// Example 3: Good async use case - concurrent file operations
 async fn process_files_async() {
-    use tokio::fs;
-
     println!("\n=== Async File Processing ===");
 
     let files = vec!["file1.txt", "file2.txt", "file3.txt"];

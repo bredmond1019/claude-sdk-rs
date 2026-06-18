@@ -36,33 +36,38 @@ impl ErrorContext {
     }
 
     /// Add debugging information
+    #[must_use]
     pub fn with_debug_info(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.debug_info.push((key.into(), value.into()));
         self
     }
 
     /// Add an error to the chain
+    #[must_use]
     pub fn with_error_chain(mut self, error: impl Into<String>) -> Self {
         self.error_chain.push(error.into());
         self
     }
 
     /// Convert to a formatted debug string
+    #[must_use]
     pub fn to_debug_string(&self) -> String {
+        use std::fmt::Write;
+
         let mut debug_str = format!("Operation: {}\n", self.operation);
-        debug_str.push_str(&format!("Timestamp: {:?}\n", self.timestamp));
+        let _ = writeln!(debug_str, "Timestamp: {:?}", self.timestamp);
 
         if !self.debug_info.is_empty() {
             debug_str.push_str("Debug Info:\n");
             for (key, value) in &self.debug_info {
-                debug_str.push_str(&format!("  {}: {}\n", key, value));
+                let _ = writeln!(debug_str, "  {key}: {value}");
             }
         }
 
         if !self.error_chain.is_empty() {
             debug_str.push_str("Error Chain:\n");
             for (i, error) in self.error_chain.iter().enumerate() {
-                debug_str.push_str(&format!("  {}: {}\n", i + 1, error));
+                let _ = writeln!(debug_str, "  {}: {}", i + 1, error);
             }
         }
 
@@ -70,7 +75,7 @@ impl ErrorContext {
     }
 }
 
-/// Enhanced ProcessError with additional context
+/// Enhanced `ProcessError` with additional context
 #[derive(Debug)]
 pub struct ProcessErrorDetails {
     /// The original error message
@@ -150,10 +155,10 @@ impl SystemInfo {
     fn get_system_load() -> Option<(f64, f64, f64)> {
         let mut loadavg = [0.0; 3];
         unsafe {
-            if libc::getloadavg(loadavg.as_mut_ptr(), 3) != -1 {
-                Some((loadavg[0], loadavg[1], loadavg[2]))
-            } else {
+            if libc::getloadavg(loadavg.as_mut_ptr(), 3) == -1 {
                 None
+            } else {
+                Some((loadavg[0], loadavg[1], loadavg[2]))
             }
         }
     }
@@ -171,11 +176,11 @@ impl SystemInfo {
         else {
             return "macOS".to_string();
         };
-        
+
         if !output.status.success() {
             return "macOS".to_string();
         }
-        
+
         if let Ok(version) = String::from_utf8(output.stdout) {
             format!("macOS {}", version.trim())
         } else {
@@ -213,7 +218,7 @@ impl SystemInfo {
 }
 
 impl ProcessErrorDetails {
-    /// Create enhanced ProcessError
+    /// Create enhanced `ProcessError`
     pub fn new(message: impl Into<String>, command: impl Into<String>, args: Vec<String>) -> Self {
         Self {
             message: message.into(),
@@ -234,18 +239,21 @@ impl ProcessErrorDetails {
     }
 
     /// Set exit code
+    #[must_use]
     pub fn with_exit_code(mut self, code: i32) -> Self {
         self.exit_code = Some(code);
         self
     }
 
     /// Set stderr output
+    #[must_use]
     pub fn with_stderr(mut self, stderr: impl Into<String>) -> Self {
         self.stderr = stderr.into();
         self
     }
 
     /// Set stdout preview
+    #[must_use]
     pub fn with_stdout_preview(mut self, stdout: impl Into<String>) -> Self {
         let stdout = stdout.into();
         self.stdout_preview = if stdout.len() > 500 {
@@ -256,7 +264,7 @@ impl ProcessErrorDetails {
         self
     }
 
-    /// Convert to ProcessError with enhanced debugging information
+    /// Convert to `ProcessError` with enhanced debugging information
     pub fn to_error(self) -> Error {
         let mut debug_sections = vec![];
 
@@ -278,19 +286,19 @@ impl ProcessErrorDetails {
             self.system_info.cpu_cores,
             self.system_info.available_memory_mb.map_or("Unknown".to_string(), |m| m.to_string()),
             self.system_info.system_load.map_or("Unknown".to_string(), |(l1, l5, l15)| 
-                format!("{:.2}, {:.2}, {:.2}", l1, l5, l15))
+                format!("{l1:.2}, {l5:.2}, {l15:.2}"))
         ));
 
         // Claude CLI version
         if let Some(version) = &self.claude_version {
-            debug_sections.push(format!("Claude CLI Version: {}", version));
+            debug_sections.push(format!("Claude CLI Version: {version}"));
         } else {
             debug_sections.push("Claude CLI Version: Unable to determine".to_string());
         }
 
         // Network status
         if let Some(status) = &self.network_status {
-            debug_sections.push(format!("Network Status: {}", status));
+            debug_sections.push(format!("Network Status: {status}"));
         }
 
         // Output details
@@ -316,7 +324,7 @@ impl ProcessErrorDetails {
                 "Environment Variables:\n{}",
                 self.relevant_env
                     .iter()
-                    .map(|(k, v)| format!("  {}={}", k, v))
+                    .map(|(k, v)| format!("  {k}={v}"))
                     .collect::<Vec<_>>()
                     .join("\n")
             ));
@@ -325,7 +333,7 @@ impl ProcessErrorDetails {
         // Debugging suggestions based on error type
         let suggestions = self.get_debugging_suggestions();
         if !suggestions.is_empty() {
-            debug_sections.push(format!("Debugging Suggestions:\n{}", suggestions));
+            debug_sections.push(format!("Debugging Suggestions:\n{suggestions}"));
         }
 
         Error::ProcessError(format!(
@@ -351,10 +359,10 @@ impl ProcessErrorDetails {
             Some(127) => suggestions
                 .push("• Exit code 127: Command not found. Verify Claude CLI is in PATH."),
             Some(130) => {
-                suggestions.push("• Exit code 130: Process terminated by Ctrl+C (SIGINT).")
+                suggestions.push("• Exit code 130: Process terminated by Ctrl+C (SIGINT).");
             }
             Some(137) => {
-                suggestions.push("• Exit code 137: Process killed (SIGKILL), possibly due to OOM.")
+                suggestions.push("• Exit code 137: Process killed (SIGKILL), possibly due to OOM.");
             }
             Some(139) => suggestions
                 .push("• Exit code 139: Segmentation fault. This may indicate a Claude CLI bug."),
@@ -409,11 +417,11 @@ impl ProcessErrorDetails {
     /// Get a masked environment variable value
     fn get_masked_env_var(var: &str) -> Option<(String, String)> {
         let value = std::env::var(var).ok()?;
-        
+
         let masked_value = Self::mask_sensitive_value(var, &value);
         Some((var.to_string(), masked_value))
     }
-    
+
     /// Mask sensitive values in environment variables
     fn mask_sensitive_value(var: &str, value: &str) -> String {
         if var.contains("KEY") || var.contains("TOKEN") || var.contains("PASSWORD") {
@@ -472,11 +480,13 @@ impl ProcessErrorDetails {
     }
 
     /// Check basic network connectivity
+    // Placeholder: a real implementation will return `None` when offline.
+    #[allow(clippy::unnecessary_wraps)]
     fn check_network_status() -> Option<String> {
         // Simple check - try to resolve a well-known domain
         match std::net::ToSocketAddrs::to_socket_addrs(&("anthropic.com", 443)) {
             Ok(_) => Some("Connected (DNS resolution successful)".to_string()),
-            Err(e) => Some(format!("Network issue: {}", e)),
+            Err(e) => Some(format!("Network issue: {e}")),
         }
     }
 }
@@ -512,7 +522,8 @@ impl RetryConfig {
     /// Calculate delay for the given attempt number (0-based)
     pub fn delay_for_attempt(&self, attempt: usize) -> Duration {
         let base_delay_ms = self.base_delay.as_millis() as f64;
-        let delay_ms = base_delay_ms * self.backoff_multiplier.powi(attempt as i32);
+        let exponent = i32::try_from(attempt).unwrap_or(i32::MAX);
+        let delay_ms = base_delay_ms * self.backoff_multiplier.powi(exponent);
         let delay_ms = delay_ms.min(self.max_delay.as_millis() as f64);
 
         let final_delay = if self.add_jitter {
@@ -595,7 +606,12 @@ where
 pub struct ErrorRecovery;
 
 impl ErrorRecovery {
-    /// Attempt to recover from a BinaryNotFound error
+    // The recovery routines form a uniformly async API: they are intentionally
+    // async for interface consistency and so future implementations can perform
+    // I/O (re-auth, network probes) without a breaking signature change.
+    #![allow(clippy::unused_async)]
+
+    /// Attempt to recover from a `BinaryNotFound` error
     pub async fn recover_binary_not_found() -> Result<()> {
         debug!("Attempting to recover from BinaryNotFound error");
 
@@ -611,14 +627,13 @@ impl ErrorRecovery {
             if std::path::Path::new(path).exists() {
                 warn!("Found Claude CLI at {} but it's not in PATH", path);
                 return Err(Error::ProcessError(format!(
-                    "Claude CLI found at {} but not in PATH. Please add it to your PATH environment variable",
-                    path
+                    "Claude CLI found at {path} but not in PATH. Please add it to your PATH environment variable"
                 )));
             }
         }
 
         // Suggest installation steps
-        let install_suggestion = r#"
+        let install_suggestion = r"
 Claude CLI not found. Please install it using one of these methods:
 
 1. Using npm (recommended):
@@ -630,7 +645,7 @@ Claude CLI not found. Please install it using one of these methods:
 3. Download from GitHub releases:
    https://github.com/anthropics/claude-cli/releases
 
-After installation, ensure the binary is in your PATH."#;
+After installation, ensure the binary is in your PATH.";
 
         Err(Error::ProcessError(install_suggestion.to_string()))
     }
@@ -641,20 +656,6 @@ After installation, ensure the binary is in your PATH."#;
 
         // Check for common authentication issues
         if std::env::var("ANTHROPIC_API_KEY").is_err() && std::env::var("CLAUDE_API_KEY").is_err() {
-            let _auth_help = r#"
-Authentication required. Please set up authentication using one of these methods:
-
-1. Run the auth command:
-   claude auth
-
-2. Set environment variable:
-   export ANTHROPIC_API_KEY=your_api_key_here
-
-3. Create a config file:
-   echo "api_key=your_api_key_here" > ~/.claude/config
-
-For more information, visit: https://docs.anthropic.com/claude/docs/cli"#;
-
             return Err(Error::NotAuthenticated);
         }
 
@@ -672,7 +673,7 @@ For more information, visit: https://docs.anthropic.com/claude/docs/cli"#;
         );
 
         let recovery_suggestion = format!(
-            r#"Operation timed out after {}s. Consider:
+            r"Operation timed out after {}s. Consider:
 
 1. Increasing the timeout (current: {}s):
    config.timeout_secs = Some({}); // Increase timeout
@@ -681,7 +682,7 @@ For more information, visit: https://docs.anthropic.com/claude/docs/cli"#;
 
 3. Checking your network connection
 
-4. Verifying Claude API service status"#,
+4. Verifying Claude API service status",
             timeout_secs,
             timeout_secs,
             timeout_secs * 2
@@ -699,7 +700,7 @@ For more information, visit: https://docs.anthropic.com/claude/docs/cli"#;
 
         let recovery_suggestion = if let Some(duration) = retry_after {
             format!(
-                r#"Rate limit exceeded. The API suggests retrying after {} seconds.
+                r"Rate limit exceeded. The API suggests retrying after {} seconds.
 
 Recovery options:
 
@@ -713,12 +714,12 @@ Recovery options:
    - Token bucket algorithm
    - Sliding window rate limiting
 
-4. Batch requests to reduce API calls"#,
+4. Batch requests to reduce API calls",
                 duration.as_secs(),
                 duration.as_secs()
             )
         } else {
-            r#"Rate limit exceeded. 
+            r"Rate limit exceeded. 
 
 Recovery options:
 
@@ -727,7 +728,7 @@ Recovery options:
 3. Use exponential backoff for retries
 4. Consider upgrading your API plan for higher limits
 
-Best practice: Track your API usage to avoid hitting limits"#
+Best practice: Track your API usage to avoid hitting limits"
                 .to_string()
         };
 
@@ -740,7 +741,7 @@ Best practice: Track your API usage to avoid hitting limits"#
 
         // Analyze error message for specific issues
         let recovery_suggestion = if error_message.contains("connection refused") {
-            r#"MCP server connection refused. 
+            r"MCP server connection refused. 
 
 Recovery steps:
 
@@ -754,31 +755,31 @@ Recovery steps:
    Ensure the port is accessible
 
 4. Try alternative connection:
-   Use a different transport (HTTP/WebSocket)"#
+   Use a different transport (HTTP/WebSocket)"
                 .to_string()
         } else if error_message.contains("timeout") {
-            r#"MCP server timeout. 
+            r"MCP server timeout. 
 
 Recovery steps:
 
 1. Increase MCP timeout in configuration
 2. Check server health and responsiveness
 3. Verify network connectivity to server
-4. Consider implementing connection pooling"#
+4. Consider implementing connection pooling"
                 .to_string()
         } else if error_message.contains("protocol") {
-            r#"MCP protocol error. 
+            r"MCP protocol error. 
 
 Recovery steps:
 
 1. Verify MCP protocol version compatibility
 2. Check message format and encoding
 3. Review server implementation
-4. Enable debug logging for protocol details"#
+4. Enable debug logging for protocol details"
                 .to_string()
         } else {
             format!(
-                r#"MCP server error: {}
+                r"MCP server error: {error_message}
 
 General recovery steps:
 
@@ -787,8 +788,7 @@ General recovery steps:
 3. Test with a simple MCP client
 4. Consider using fallback behavior
 
-For persistent issues, consult MCP documentation."#,
-                error_message
+For persistent issues, consult MCP documentation."
             )
         };
 
@@ -799,7 +799,7 @@ For persistent issues, consult MCP documentation."#,
     pub async fn recover_stream_closed() -> Result<()> {
         debug!("Attempting to recover from stream closed error");
 
-        let recovery_suggestion = r#"Stream closed unexpectedly.
+        let recovery_suggestion = r"Stream closed unexpectedly.
 
 Recovery options:
 
@@ -832,12 +832,15 @@ loop {
         Err(e) => return Err(e),
     }
 }
-```"#;
+```";
 
         Err(Error::ProcessError(recovery_suggestion.to_string()))
     }
 
     /// Get retry-after duration from rate limit response
+    // Placeholder: a real implementation will parse response headers and may
+    // return `None` when no `Retry-After` is present.
+    #[allow(clippy::unnecessary_wraps)]
     fn get_retry_after_duration() -> Option<Duration> {
         // In a real implementation, this would parse headers from the response
         // For now, return a reasonable default

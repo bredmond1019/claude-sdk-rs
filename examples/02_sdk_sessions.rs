@@ -23,7 +23,25 @@ async fn main() -> claude_sdk_rs::Result<()> {
     // Example 3: Session context demonstration
     session_context_demo().await?;
 
+    // Example 4: Manual, client-side session tracking (no API calls)
+    manual_tracking_demo();
+
     Ok(())
+}
+
+/// Demonstrates tracking session metadata yourself with `SimpleSessionManager`
+fn manual_tracking_demo() {
+    println!("\n4. Manual session tracking");
+
+    let mut manager = SimpleSessionManager::new();
+    let rust = manager.create_session("Rust questions");
+    let python = manager.create_session("Python questions");
+
+    manager.record_message(&rust);
+    manager.record_message(&rust);
+    manager.record_message(&python);
+
+    manager.list_sessions();
 }
 
 /// Demonstrates basic session usage
@@ -137,7 +155,7 @@ async fn session_context_demo() -> claude_sdk_rs::Result<()> {
     let session_id = SessionId::new(Uuid::new_v4().to_string());
 
     // Build up context with a series of related queries
-    let queries = vec![
+    let queries = [
         "What is a web server?",
         "What Rust crate is best for this?",
         "Show me a simple route example",
@@ -174,7 +192,6 @@ struct SimpleSessionManager {
 }
 
 struct SessionInfo {
-    id: String,
     description: String,
     message_count: usize,
 }
@@ -189,7 +206,6 @@ impl SimpleSessionManager {
     fn create_session(&mut self, description: &str) -> String {
         let id = Uuid::new_v4().to_string();
         let info = SessionInfo {
-            id: id.clone(),
             description: description.to_string(),
             message_count: 0,
         };

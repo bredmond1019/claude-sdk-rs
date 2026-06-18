@@ -3,7 +3,8 @@
 > Tracks work completed and remaining for the portfolio split-and-trim. See
 > `planning/context.md` for why, and `planning/plans/split-and-trim-for-portfolio.md` for how.
 
-**Current phase:** Phases 1–9 complete — all execution done. Next: run the verification gate below.
+**Current phase:** Phases 1–9 complete **and the verification gate has PASSED.** The trim
+is finished; the crate is a clean, pedantic-clippy-clean, library-only SDK.
 **Branch:** `split-and-trim-for-portfolio`
 
 ## Completed
@@ -44,16 +45,39 @@ Ordered per the plan; check off as completed.
 - [x] 9. CHANGELOG `2.0.0` entry (BREAKING: removed `cli`, `analytics`, `mcp`, `full`; features now `default = []` + `sqlite`; added a migration note)
 
 ## Verification gate (run after execution)
-- [ ] `cargo build` + `cargo build --features sqlite` clean
-- [ ] `cargo clippy --all-targets --all-features -- -D warnings` clean
-- [ ] `cargo test --all-features` green
-- [ ] `cargo build --examples` compiles
-- [ ] `cargo bench --no-run` compiles
-- [ ] `cargo package --allow-dirty` dry-run OK
-- [ ] `grep -rn "claude-interactive\|crate_interactive\|src/cli\|src/mcp"` → no stale refs
-- [ ] `cargo doc --no-deps` builds
+- [x] `cargo build` + `cargo build --features sqlite` clean
+- [x] `cargo clippy --all-targets --all-features -- -D warnings` clean (also clean on default features)
+- [x] `cargo test --all-features` green (149 lib/integration + 85 doctests, 4 ignored)
+- [x] `cargo build --examples` compiles
+- [x] `cargo bench --no-run` compiles
+- [x] `cargo package --allow-dirty` dry-run OK
+- [x] `grep -rn "claude-interactive\|crate_interactive\|src/cli\|src/mcp"` → no stale refs
+- [x] `cargo doc --no-deps` builds
+- [x] `cargo fmt --check` clean
+
+**Verification gate PASSED (2026-06-18).** All execution phases plus the gate are complete.
 
 ## Notes / log
+- **2026-06-18** — Verification gate run and PASSED. All gate items green: `cargo build`
+  (default + `sqlite`), `cargo test --all-features` (149 lib/integration, 4 ignored; 85
+  doctests), `cargo build --examples`, `cargo bench --no-run`, `cargo package --allow-dirty
+  --features sqlite`, `cargo doc --no-deps`, stale-ref grep empty, and `cargo fmt --check`.
+  The one red item — `cargo clippy --all-targets --all-features -- -D warnings` (249 findings,
+  all self-imposed `#![warn(clippy::pedantic)]` lints) — was resolved to **pedantic-clean**
+  (owner chose this over relaxing the lint config). Work: `cargo clippy --fix` cleared ~140
+  mechanical lints (format-arg inlining, redundant closures, raw-string hashes), then the
+  ~108 residual were hand-resolved — `#[must_use]` on 27 builder/`new` methods; three `Default`
+  impls (`MemoryStorage`, `BackpressureMonitor`, `StreamConfigBuilder`); `push_str(&format!())`
+  → `writeln!` in telemetry/error_handling; `strip_prefix`, `enumerate`, `sort_by_key(Reverse)`,
+  exhaustive `CircuitState::Open` match arms; removed a dead `avg_connection_duration` field and
+  a dead `_auth_help` binding; `i32::try_from` for the backoff exponent; documented scoped
+  `#[allow]`s for intentional cases (async recovery API, placeholder `Option` returns,
+  metrics-math casts via a crate-level allow, `too_many_lines` on cohesive process/validate
+  fns, test-only `float_cmp`/`match_same_arms`); and wired the previously-dead
+  `SimpleSessionManager` into `examples/02_sdk_sessions.rs`. Also consolidated the two
+  conflicting clippy configs into a single clean `clippy.toml` (deleted the stale
+  `.clippy.toml` that still referenced `mcp`/workspace). Clippy now exits 0 on both default and
+  `--all-features`.
 - **2026-06-18** — Phase 1 complete. 148 files / 70,394 LOC removed (`src/cli`, `src/mcp`,
   `src/bin`, `tests/cli`, `tests/mcp`, cruft). Default build green. 145 unit/integration
   tests pass; 83 doctest failures are pre-existing naming-drift bugs (`claude_sdk_rs_core`

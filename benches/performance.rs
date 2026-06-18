@@ -1,6 +1,5 @@
 use claude_sdk_rs::{Client, StreamFormat};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use tokio::runtime::Runtime;
 
 fn benchmark_client_creation(c: &mut Criterion) {
     c.bench_function("client_creation_default", |b| {

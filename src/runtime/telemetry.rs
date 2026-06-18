@@ -250,7 +250,7 @@ impl ErrorTelemetry {
         }
 
         let recent_errors = self.recent_errors.read().await;
-        let error_rate = self.calculate_error_rate(&recent_errors);
+        let error_rate = Self::calculate_error_rate(&recent_errors);
 
         let recovery_rates = self.recovery_rates.read().await.clone();
 
@@ -265,7 +265,7 @@ impl ErrorTelemetry {
     }
 
     /// Calculate current error rate (errors per minute)
-    fn calculate_error_rate(&self, recent_errors: &VecDeque<ErrorRecord>) -> f64 {
+    fn calculate_error_rate(recent_errors: &VecDeque<ErrorRecord>) -> f64 {
         if recent_errors.is_empty() {
             return 0.0;
         }
@@ -284,11 +284,13 @@ impl ErrorTelemetry {
     /// Check if we should send an alert
     async fn should_alert(&self) -> bool {
         let recent = self.recent_errors.read().await;
-        let error_rate = self.calculate_error_rate(&recent);
+        let error_rate = Self::calculate_error_rate(&recent);
         error_rate > self.config.error_rate_threshold
     }
 
     /// Send an alert (placeholder for integration with alerting systems)
+    // Placeholder: a real implementation will await an alerting backend.
+    #[allow(clippy::unused_async)]
     async fn send_alert(&self) {
         error!(
             threshold = self.config.error_rate_threshold,
@@ -308,7 +310,7 @@ impl ErrorTelemetry {
         "Stack trace capture not implemented".to_string()
     }
 
-    /// Convert u16 to ErrorCode
+    /// Convert u16 to `ErrorCode`
     fn u16_to_error_code(code: u16) -> Result<ErrorCode, ()> {
         match code {
             1 => Ok(ErrorCode::BinaryNotFound),
@@ -330,6 +332,8 @@ impl ErrorTelemetry {
 
     /// Export metrics in Prometheus format
     pub async fn export_prometheus_metrics(&self) -> String {
+        use std::fmt::Write;
+
         let mut output = String::new();
 
         // Error counts by code
@@ -338,10 +342,7 @@ impl ErrorTelemetry {
 
         for (code, counter) in &self.error_counts {
             let count = counter.load(Ordering::SeqCst);
-            output.push_str(&format!(
-                "claude_errors_total{{code=\"{}\"}} {}\n",
-                code, count
-            ));
+            let _ = writeln!(output, "claude_errors_total{{code=\"{code}\"}} {count}");
         }
 
         // Recovery rates
@@ -352,27 +353,29 @@ impl ErrorTelemetry {
 
         let recovery_rates = self.recovery_rates.read().await;
         for (code, metrics) in recovery_rates.iter() {
-            output.push_str(&format!(
-                "claude_recovery_success_rate{{code=\"{}\"}} {:.2}\n",
+            let _ = writeln!(
+                output,
+                "claude_recovery_success_rate{{code=\"{}\"}} {:.2}",
                 code,
                 metrics.success_rate()
-            ));
+            );
         }
 
         // Error rate
         let recent = self.recent_errors.read().await;
-        let error_rate = self.calculate_error_rate(&recent);
+        let error_rate = Self::calculate_error_rate(&recent);
         output.push_str("\n# HELP claude_error_rate_per_minute Current error rate per minute\n");
         output.push_str("# TYPE claude_error_rate_per_minute gauge\n");
-        output.push_str(&format!("claude_error_rate_per_minute {:.2}\n", error_rate));
+        let _ = writeln!(output, "claude_error_rate_per_minute {error_rate:.2}");
 
         // Uptime
         output.push_str("\n# HELP claude_uptime_seconds Uptime in seconds\n");
         output.push_str("# TYPE claude_uptime_seconds counter\n");
-        output.push_str(&format!(
-            "claude_uptime_seconds {}\n",
+        let _ = writeln!(
+            output,
+            "claude_uptime_seconds {}",
             self.start_time.elapsed().as_secs()
-        ));
+        );
 
         output
     }
@@ -405,7 +408,7 @@ impl ErrorStatistics {
             .filter(|(_, count)| *count > 0)
             .collect();
 
-        errors.sort_by(|a, b| b.1.cmp(&a.1));
+        errors.sort_by_key(|&(_, count)| std::cmp::Reverse(count));
         errors.truncate(limit);
         errors
     }
@@ -454,6 +457,8 @@ pub fn telemetry() -> Option<Arc<ErrorTelemetry>> {
 }
 
 /// Record an error with global telemetry
+// The public API intentionally takes a standard-library `HashMap` for context.
+#[allow(clippy::implicit_hasher)]
 pub async fn record_error(error: &Error, operation: &str, context: HashMap<String, String>) {
     if let Some(telemetry) = telemetry() {
         telemetry.record_error(error, operation, context).await;
@@ -471,10 +476,12 @@ pub async fn record_recovery(error_code: ErrorCode, success: bool, duration: Dur
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
+
     use super::*;
 
     #[tokio::test]
-    #[ignore] // TODO: Fix deadlock in error telemetry - temporarily disabled to unblock CI
+    #[ignore = "TODO: fix deadlock in error telemetry; disabled to unblock CI"]
     async fn test_error_telemetry() {
         let config = TelemetryConfig::default();
         let telemetry = ErrorTelemetry::new(config);
@@ -497,11 +504,7 @@ mod tests {
             .await;
 
         telemetry
-            .record_recovery_attempt(
-                ErrorCode::RateLimitExceeded,
-                false,
-                Duration::from_millis(1000),
-            )
+            .record_recovery_attempt(ErrorCode::RateLimitExceeded, false, Duration::from_secs(1))
             .await;
 
         // Get statistics
@@ -521,7 +524,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix deadlock in error rate calculation - temporarily disabled to unblock CI
+    #[ignore = "TODO: fix deadlock in error rate calculation; disabled to unblock CI"]
     async fn test_error_rate_calculation() {
         use tokio::time::{timeout, Duration};
 
@@ -557,7 +560,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix deadlock in prometheus export - temporarily disabled to unblock CI
+    #[ignore = "TODO: fix deadlock in prometheus export; disabled to unblock CI"]
     async fn test_prometheus_export() {
         use tokio::time::{timeout, Duration};
 

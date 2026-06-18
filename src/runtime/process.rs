@@ -10,6 +10,7 @@ use tokio::time::{timeout, Duration, Instant};
 use tracing::debug;
 
 /// Execute a one-shot Claude command with timeout
+#[allow(clippy::too_many_lines)] // cohesive spawn/dispatch/parse sequence kept together
 pub async fn execute_claude(config: &Config, query: &str) -> Result<String> {
     let context = ErrorContext::new("execute_claude")
         .with_debug_info("query_length", query.len().to_string())
@@ -26,7 +27,7 @@ pub async fn execute_claude(config: &Config, query: &str) -> Result<String> {
         which::which("claude").map_err(|e| {
             let enhanced_context = context
                 .clone()
-                .with_error_chain(format!("Binary search failed: {}", e))
+                .with_error_chain(format!("Binary search failed: {e}"))
                 .with_debug_info("search_error", e.to_string());
             let error = Error::BinaryNotFound;
             log_error_with_context(&error, &enhanced_context);
@@ -142,9 +143,9 @@ pub async fn execute_claude(config: &Config, query: &str) -> Result<String> {
 
         let timeout_duration = Duration::from_secs(config.timeout_secs.unwrap_or(30));
         let mut child = cmd.spawn().map_err(|e| {
-            let cmd_line = format!("{:?}", cmd);
+            let cmd_line = format!("{cmd:?}");
             let error_details = ProcessErrorDetails::new(
-                format!("Failed to spawn Claude process: {}", e),
+                format!("Failed to spawn Claude process: {e}"),
                 "claude",
                 vec![],
             )
@@ -152,7 +153,7 @@ pub async fn execute_claude(config: &Config, query: &str) -> Result<String> {
 
             let enhanced_context = context
                 .clone()
-                .with_error_chain(format!("Process spawn failed: {}", e))
+                .with_error_chain(format!("Process spawn failed: {e}"))
                 .with_debug_info("command_line", cmd_line)
                 .with_debug_info("spawn_error", e.to_string());
 
@@ -167,11 +168,11 @@ pub async fn execute_claude(config: &Config, query: &str) -> Result<String> {
             stdin
                 .write_all(query.as_bytes())
                 .await
-                .map_err(|e| Error::ProcessError(format!("Failed to write to stdin: {}", e)))?;
+                .map_err(|e| Error::ProcessError(format!("Failed to write to stdin: {e}")))?;
             stdin
                 .flush()
                 .await
-                .map_err(|e| Error::ProcessError(format!("Failed to flush stdin: {}", e)))?;
+                .map_err(|e| Error::ProcessError(format!("Failed to flush stdin: {e}")))?;
             drop(stdin); // Close stdin
         }
 
@@ -327,6 +328,7 @@ pub async fn execute_claude(config: &Config, query: &str) -> Result<String> {
 ///     Ok(())
 /// }
 /// ```
+#[allow(clippy::too_many_lines)] // cohesive spawn/dispatch/stream-setup sequence kept together
 pub async fn execute_claude_streaming(
     config: &Config,
     query: &str,
@@ -428,7 +430,7 @@ pub async fn execute_claude_streaming(
 
     let mut child = cmd
         .spawn()
-        .map_err(|e| Error::ProcessError(format!("Failed to spawn process: {}", e)))?;
+        .map_err(|e| Error::ProcessError(format!("Failed to spawn process: {e}")))?;
 
     // Write the query to stdin and close it
     if let Some(stdin) = child.stdin.take() {
@@ -475,8 +477,7 @@ pub async fn execute_claude_streaming(
                     Ok(Err(e)) => {
                         let _ = tx_clone
                             .send(Err(Error::ProcessError(format!(
-                                "Failed to read line: {}",
-                                e
+                                "Failed to read line: {e}"
                             ))))
                             .await;
                         break;
@@ -503,7 +504,7 @@ pub async fn execute_claude_streaming(
             }
             Err(e) => {
                 let _ = tx_error
-                    .send(Err(Error::ProcessError(format!("Process error: {}", e))))
+                    .send(Err(Error::ProcessError(format!("Process error: {e}"))))
                     .await;
             }
             Ok(_) => {

@@ -58,8 +58,15 @@ pub struct BackpressureMonitor {
     last_adjustment: Arc<parking_lot::Mutex<Instant>>,
 }
 
+impl Default for BackpressureMonitor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BackpressureMonitor {
     /// Creates a new backpressure monitor with default settings.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             sent_count: Arc::new(AtomicU64::new(0)),
@@ -235,6 +242,8 @@ impl<T> BackpressureSender<T> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::float_cmp)]
+
     use super::*;
 
     #[tokio::test]

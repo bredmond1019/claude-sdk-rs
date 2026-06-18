@@ -179,8 +179,7 @@ impl Clone for Error {
             Error::InvalidInput(s) => Error::InvalidInput(s.clone()),
             Error::Timeout(secs) => Error::Timeout(*secs),
             Error::SerializationError(e) => Error::SerializationError(
-                serde_json::from_str::<serde_json::Value>(&format!("\"{}\"", e.to_string()))
-                    .unwrap_err(),
+                serde_json::from_str::<serde_json::Value>(&format!("\"{e}\"")).unwrap_err(),
             ),
             Error::Io(e) => Error::Io(std::io::Error::new(e.kind(), e.to_string())),
             Error::ProcessError(s) => Error::ProcessError(s.clone()),
@@ -394,8 +393,8 @@ mod tests {
         ];
 
         // Check sequential ordering
-        for i in 0..codes.len() {
-            assert_eq!(codes[i], (i + 1) as u16);
+        for (i, &code) in codes.iter().enumerate() {
+            assert_eq!(code, (i + 1) as u16);
         }
     }
 }

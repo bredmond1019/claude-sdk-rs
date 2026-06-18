@@ -14,13 +14,11 @@ pub struct SqliteStorage {
 }
 
 impl SqliteStorage {
-    /// Create a new SQLite storage backend
+    /// Create a new `SQLite` storage backend
     pub async fn new(path: PathBuf) -> Result<Self> {
         // Ensure parent directory exists
         if let Some(parent) = path.parent() {
-            tokio::fs::create_dir_all(parent)
-                .await
-                .map_err(|e| Error::Io(e))?;
+            tokio::fs::create_dir_all(parent).await.map_err(Error::Io)?;
         }
 
         // `mode=rwc` opens read-write and creates the database file if it does not
@@ -34,7 +32,7 @@ impl SqliteStorage {
             .map_err(|e| {
                 Error::Io(std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    format!("Failed to connect to SQLite database: {}", e),
+                    format!("Failed to connect to SQLite database: {e}"),
                 ))
             })?;
 
@@ -55,7 +53,7 @@ impl SqliteStorage {
         .map_err(|e| {
             Error::Io(std::io::Error::new(
                 std::io::ErrorKind::Other,
-                format!("Failed to create sessions table: {}", e),
+                format!("Failed to create sessions table: {e}"),
             ))
         })?;
 
@@ -98,7 +96,7 @@ impl SessionStorage for SqliteStorage {
         .map_err(|e| {
             Error::Io(std::io::Error::new(
                 std::io::ErrorKind::Other,
-                format!("Failed to save session: {}", e),
+                format!("Failed to save session: {e}"),
             ))
         })?;
 
@@ -119,7 +117,7 @@ impl SessionStorage for SqliteStorage {
         .map_err(|e| {
             Error::Io(std::io::Error::new(
                 std::io::ErrorKind::Other,
-                format!("Failed to load session: {}", e),
+                format!("Failed to load session: {e}"),
             ))
         })?;
 
@@ -136,7 +134,7 @@ impl SessionStorage for SqliteStorage {
                     .map_err(|e| {
                         Error::SerializationError(serde_json::Error::io(std::io::Error::new(
                             std::io::ErrorKind::InvalidData,
-                            format!("Invalid created_at timestamp: {}", e),
+                            format!("Invalid created_at timestamp: {e}"),
                         )))
                     })?
                     .with_timezone(&chrono::Utc);
@@ -144,7 +142,7 @@ impl SessionStorage for SqliteStorage {
                     .map_err(|e| {
                         Error::SerializationError(serde_json::Error::io(std::io::Error::new(
                             std::io::ErrorKind::InvalidData,
-                            format!("Invalid updated_at timestamp: {}", e),
+                            format!("Invalid updated_at timestamp: {e}"),
                         )))
                     })?
                     .with_timezone(&chrono::Utc);
@@ -169,7 +167,7 @@ impl SessionStorage for SqliteStorage {
             .map_err(|e| {
                 Error::Io(std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    format!("Failed to delete session: {}", e),
+                    format!("Failed to delete session: {e}"),
                 ))
             })?;
 
@@ -183,7 +181,7 @@ impl SessionStorage for SqliteStorage {
             .map_err(|e| {
                 Error::Io(std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    format!("Failed to list sessions: {}", e),
+                    format!("Failed to list sessions: {e}"),
                 ))
             })?;
 
@@ -205,7 +203,7 @@ impl SessionStorage for SqliteStorage {
             .map_err(|e| {
                 Error::Io(std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    format!("Failed to clear sessions: {}", e),
+                    format!("Failed to clear sessions: {e}"),
                 ))
             })?;
 
@@ -299,7 +297,7 @@ mod tests {
 
         // Create multiple sessions
         for i in 0..3 {
-            let session = Session::new(SessionId::new(format!("test-session-{}", i)));
+            let session = Session::new(SessionId::new(format!("test-session-{i}")));
             storage.save(&session).await?;
         }
 

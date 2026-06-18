@@ -413,7 +413,7 @@ impl ToolPermission {
         }
     }
 
-    /// Parse a granular permission string into a ToolPermission
+    /// Parse a granular permission string into a `ToolPermission`
     ///
     /// Supports multiple formats for tool permissions:
     /// - `Bash(command)` - Bash command permission (e.g., `Bash(ls)`, `Bash(git status)`)
@@ -466,8 +466,8 @@ impl ToolPermission {
         }
 
         // Handle bash:command format (legacy)
-        if trimmed.starts_with("bash:") {
-            let command = trimmed[5..].trim();
+        if let Some(rest) = trimmed.strip_prefix("bash:") {
+            let command = rest.trim();
             if command.is_empty() {
                 return Err(Error::InvalidInput(
                     "Bash command cannot be empty in permission string".to_string(),
@@ -479,10 +479,8 @@ impl ToolPermission {
         }
 
         // Handle mcp__server__tool format
-        if trimmed.starts_with("mcp__") {
+        if let Some(remaining) = trimmed.strip_prefix("mcp__") {
             // Remove the "mcp__" prefix and split the remaining part
-            let remaining = &trimmed[5..];
-
             // Find the first "__" to separate server from tool
             if let Some(separator_pos) = remaining.find("__") {
                 let server = remaining[..separator_pos].trim();
@@ -500,15 +498,13 @@ impl ToolPermission {
                 });
             }
             return Err(Error::InvalidInput(format!(
-                "Invalid MCP permission format '{}'. Expected 'mcp__server__tool'",
-                trimmed
+                "Invalid MCP permission format '{trimmed}'. Expected 'mcp__server__tool'"
             )));
         }
 
         // Unknown format
         Err(Error::InvalidInput(format!(
-            "Unknown tool permission format '{}'. Supported formats: 'Bash(command)', 'bash:command', 'mcp__server__tool', '*'",
-            trimmed
+            "Unknown tool permission format '{trimmed}'. Supported formats: 'Bash(command)', 'bash:command', 'mcp__server__tool', '*'"
         )))
     }
 
@@ -575,7 +571,7 @@ impl ToolPermission {
 impl FromStr for ToolPermission {
     type Err = Error;
 
-    /// Parse a string into a ToolPermission
+    /// Parse a string into a `ToolPermission`
     ///
     /// This implementation uses the `parse_granular` method to support
     /// multiple permission string formats.
@@ -822,7 +818,7 @@ mod tests {
         // Test that we can create invalid permissions and catch them in validation
         // (This tests the validation logic even though construction should prevent these)
         let invalid_bash = ToolPermission::Bash {
-            command: "".to_string(), // Empty command
+            command: String::new(), // Empty command
         };
         assert!(invalid_bash.validate().is_err());
 
@@ -832,14 +828,14 @@ mod tests {
         assert!(newline_bash.validate().is_err());
 
         let invalid_mcp_server = ToolPermission::Mcp {
-            server: "".to_string(), // Empty server
+            server: String::new(), // Empty server
             tool: "tool".to_string(),
         };
         assert!(invalid_mcp_server.validate().is_err());
 
         let invalid_mcp_tool = ToolPermission::Mcp {
             server: "server".to_string(),
-            tool: "".to_string(), // Empty tool
+            tool: String::new(), // Empty tool
         };
         assert!(invalid_mcp_tool.validate().is_err());
 
@@ -873,8 +869,7 @@ mod tests {
             let reparsed = ToolPermission::from_str(&formatted).unwrap();
             assert_eq!(
                 parsed, reparsed,
-                "Roundtrip failed for '{}': parsed={:?}, formatted='{}', reparsed={:?}",
-                permission_str, parsed, formatted, reparsed
+                "Roundtrip failed for '{permission_str}': parsed={parsed:?}, formatted='{formatted}', reparsed={reparsed:?}"
             );
         }
     }
@@ -895,8 +890,7 @@ mod tests {
             let cli_format = parsed.to_cli_format();
             assert_eq!(
                 cli_format, expected_cli,
-                "Legacy format '{}' should convert to '{}'",
-                legacy, expected_cli
+                "Legacy format '{legacy}' should convert to '{expected_cli}'"
             );
         }
     }

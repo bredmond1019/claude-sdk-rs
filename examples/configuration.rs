@@ -114,7 +114,7 @@ async fn model_configurations() -> Result<(), Box<dyn std::error::Error>> {
 
         let client = Client::builder()
             .model(model)
-            .system_prompt(&format!("You are using {}. Keep responses brief.", model))
+            .system_prompt(format!("You are using {}. Keep responses brief.", model))
             .build()?;
 
         match client.query("What model are you using?").send().await {

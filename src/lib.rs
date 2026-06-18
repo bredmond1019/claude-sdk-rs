@@ -19,7 +19,7 @@
 //! - **Error handling**: Comprehensive error types with rich context and telemetry
 //! - **Configuration**: Flexible configuration with a builder pattern
 //!
-//! ### Optional: `sqlite` - SQLite Storage Backend
+//! ### Optional: `sqlite` - `SQLite` Storage Backend
 //! Adds SQLite-backed persistent session storage:
 //! ```toml
 //! [dependencies]
@@ -235,6 +235,14 @@
 #![allow(clippy::must_use_candidate)]
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
+// Numeric casts in the telemetry, recovery, and rate-limiting code convert
+// between integer counters/durations and `f64` for ratio/throughput math where
+// the precision loss and truncation are intentional and bounded.
+#![allow(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
 
 // Core modules
 pub mod core;

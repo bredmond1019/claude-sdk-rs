@@ -240,7 +240,7 @@ impl ClaudeAssistant {
         io::stdin().read_line(&mut input).unwrap();
         let input = input.trim();
 
-        for (id, _) in &self.sessions {
+        for id in self.sessions.keys() {
             if id.starts_with(input) {
                 self.current_session = SessionId::new(id.clone());
                 println!("Switched to session: {}", id);
@@ -262,7 +262,7 @@ impl ClaudeAssistant {
 
         let mut query_cost = 0.0;
 
-        print!("\n");
+        println!();
         while let Some(message) = stream.next().await {
             match message? {
                 Message::Assistant { content, meta } => {

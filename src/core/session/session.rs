@@ -97,21 +97,16 @@ pub trait SessionStorage: Send + Sync + std::fmt::Debug {
 }
 
 /// Storage backend selection
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum StorageBackend {
     /// In-memory storage (default, not persistent)
+    #[default]
     Memory,
     /// File-based storage with directory path
     File(PathBuf),
-    /// SQLite database storage with file path
+    /// `SQLite` database storage with file path
     #[cfg(feature = "sqlite")]
     Sqlite(PathBuf),
-}
-
-impl Default for StorageBackend {
-    fn default() -> Self {
-        StorageBackend::Memory
-    }
 }
 
 /// In-memory session storage (non-persistent)
@@ -120,8 +115,15 @@ pub struct MemoryStorage {
     sessions: Arc<RwLock<HashMap<SessionId, Session>>>,
 }
 
+impl Default for MemoryStorage {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MemoryStorage {
     /// Create a new in-memory storage backend
+    #[must_use]
     pub fn new() -> Self {
         Self {
             sessions: Arc::new(RwLock::new(HashMap::new())),
@@ -179,7 +181,7 @@ impl FileStorage {
     async fn ensure_directory(&self) -> Result<()> {
         tokio::fs::create_dir_all(&self.base_path)
             .await
-            .map_err(|e| Error::Io(e))?;
+            .map_err(Error::Io)?;
         Ok(())
     }
 }
@@ -195,9 +197,7 @@ impl SessionStorage for FileStorage {
         let json = serde_json::to_string_pretty(&updated_session)?;
         let path = self.session_file_path(&session.id);
 
-        tokio::fs::write(&path, json)
-            .await
-            .map_err(|e| Error::Io(e))?;
+        tokio::fs::write(&path, json).await.map_err(Error::Io)?;
 
         Ok(())
     }
@@ -231,9 +231,9 @@ impl SessionStorage for FileStorage {
         let mut ids = Vec::new();
         let mut entries = tokio::fs::read_dir(&self.base_path)
             .await
-            .map_err(|e| Error::Io(e))?;
+            .map_err(Error::Io)?;
 
-        while let Some(entry) = entries.next_entry().await.map_err(|e| Error::Io(e))? {
+        while let Some(entry) = entries.next_entry().await.map_err(Error::Io)? {
             let path = entry.path();
             if path.extension().and_then(|s| s.to_str()) == Some("json") {
                 if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
@@ -249,14 +249,12 @@ impl SessionStorage for FileStorage {
         if self.base_path.exists() {
             let mut entries = tokio::fs::read_dir(&self.base_path)
                 .await
-                .map_err(|e| Error::Io(e))?;
+                .map_err(Error::Io)?;
 
-            while let Some(entry) = entries.next_entry().await.map_err(|e| Error::Io(e))? {
+            while let Some(entry) = entries.next_entry().await.map_err(Error::Io)? {
                 let path = entry.path();
                 if path.extension().and_then(|s| s.to_str()) == Some("json") {
-                    tokio::fs::remove_file(&path)
-                        .await
-                        .map_err(|e| Error::Io(e))?;
+                    tokio::fs::remove_file(&path).await.map_err(Error::Io)?;
                 }
             }
         }
@@ -293,7 +291,10 @@ impl SessionManager {
         }
     }
 
-    /// Create a new session manager with specified storage backend (async version for SQLite)
+    /// Create a new session manager with specified storage backend (async version for `SQLite`)
+    // Only the `sqlite` backend awaits; the signature stays async so the API is
+    // stable regardless of which storage features are enabled.
+    #[cfg_attr(not(feature = "sqlite"), allow(clippy::unused_async))]
     pub async fn with_storage_async(backend: StorageBackend) -> Result<Self> {
         let storage: Box<dyn SessionStorage> = match backend {
             StorageBackend::Memory => Box::new(MemoryStorage::new()),

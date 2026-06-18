@@ -59,7 +59,7 @@ pub struct MessageStream {
 }
 
 impl MessageStream {
-    /// Create a new MessageStream from a channel receiver
+    /// Create a new `MessageStream` from a channel receiver
     ///
     /// This is typically called internally by the Client. The format parameter
     /// is reserved for future use but currently not utilized.
@@ -67,10 +67,13 @@ impl MessageStream {
         Self { receiver }
     }
 
-    /// Create a MessageStream from a line receiver and format
+    /// Create a `MessageStream` from a line receiver and format
     ///
     /// This function takes a receiver of raw output lines from the Claude CLI
     /// and converts them into a stream of parsed Messages based on the format.
+    // Async by design: part of the async streaming constructor surface; the
+    // spawned worker does the awaiting.
+    #[allow(clippy::unused_async)]
     pub async fn from_line_stream(
         mut line_receiver: mpsc::Receiver<Result<String>>,
         format: StreamFormat,

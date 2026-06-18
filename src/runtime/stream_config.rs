@@ -126,7 +126,7 @@ pub fn set_stream_config(config: StreamConfig) -> Result<(), StreamConfig> {
     STREAM_CONFIG.set(config)
 }
 
-/// Builder for StreamConfig
+/// Builder for `StreamConfig`
 ///
 /// Provides a fluent interface for constructing custom streaming configurations.
 /// All methods are chainable and return `self` for ergonomic configuration.
@@ -153,8 +153,15 @@ pub struct StreamConfigBuilder {
     config: StreamConfig,
 }
 
+impl Default for StreamConfigBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StreamConfigBuilder {
     /// Creates a new stream configuration builder with default settings.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             config: StreamConfig::default(),
@@ -162,24 +169,28 @@ impl StreamConfigBuilder {
     }
 
     /// Sets the channel buffer size for streaming operations.
+    #[must_use]
     pub fn channel_buffer_size(mut self, size: usize) -> Self {
         self.config.channel_buffer_size = size;
         self
     }
 
     /// Sets the initial capacity for string buffers.
+    #[must_use]
     pub fn string_capacity(mut self, capacity: usize) -> Self {
         self.config.string_capacity = capacity;
         self
     }
 
     /// Enables or disables adaptive buffering based on throughput.
+    #[must_use]
     pub fn adaptive_buffering(mut self, enabled: bool) -> Self {
         self.config.adaptive_buffering = enabled;
         self
     }
 
     /// Sets the minimum and maximum buffer size range for adaptive buffering.
+    #[must_use]
     pub fn buffer_size_range(mut self, min: usize, max: usize) -> Self {
         self.config.min_buffer_size = min;
         self.config.max_buffer_size = max;

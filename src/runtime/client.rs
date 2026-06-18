@@ -1,5 +1,6 @@
 use crate::core::{
-    validate_query_with_security_level, ClaudeCliResponse, ClaudeResponse, Config, Result, SessionId, StreamFormat,
+    validate_query_with_security_level, ClaudeCliResponse, ClaudeResponse, Config, Result,
+    SessionId, StreamFormat,
 };
 use crate::runtime::{process::execute_claude, stream::MessageStream};
 use std::sync::Arc;
@@ -9,11 +10,11 @@ fn extract_text_from_message(msg: &serde_json::Value, result: &mut String) {
     let Some(message) = msg.get("message") else {
         return;
     };
-    
+
     let Some(content_array) = message.get("content").and_then(|v| v.as_array()) else {
         return;
     };
-    
+
     for content_item in content_array {
         extract_text_from_content_item(content_item, result);
     }
@@ -24,14 +25,14 @@ fn extract_text_from_content_item(content_item: &serde_json::Value, result: &mut
     if content_item.get("type").and_then(|v| v.as_str()) != Some("text") {
         return;
     }
-    
+
     if let Some(text) = content_item.get("text").and_then(|v| v.as_str()) {
         result.push_str(text);
     }
 }
 
 /// Parse stream JSON output from Claude CLI
-fn parse_stream_json_output(output: &str) -> Result<ClaudeResponse> {
+fn parse_stream_json_output(output: &str) -> ClaudeResponse {
     let mut result = String::new();
     let mut all_json = Vec::new();
 
@@ -41,21 +42,25 @@ fn parse_stream_json_output(output: &str) -> Result<ClaudeResponse> {
 
     // Return the response with all JSON messages as an array
     let raw_json = serde_json::Value::Array(all_json);
-    Ok(ClaudeResponse::with_json(result, raw_json))
+    ClaudeResponse::with_json(result, raw_json)
 }
 
 /// Process a single line of stream JSON output
-fn process_stream_json_line(line: &str, all_json: &mut Vec<serde_json::Value>, result: &mut String) {
+fn process_stream_json_line(
+    line: &str,
+    all_json: &mut Vec<serde_json::Value>,
+    result: &mut String,
+) {
     if line.trim().is_empty() {
         return;
     }
-    
+
     let Ok(msg) = serde_json::from_str::<serde_json::Value>(line) else {
         return;
     };
-    
+
     all_json.push(msg.clone());
-    
+
     // Check if it's an assistant message and extract text
     if msg.get("type").and_then(|v| v.as_str()) == Some("assistant") {
         extract_text_from_message(&msg, result);
@@ -210,9 +215,7 @@ impl Client {
                     json_value,
                 ))
             }
-            StreamFormat::StreamJson => {
-                parse_stream_json_output(&output)
-            }
+            StreamFormat::StreamJson => Ok(parse_stream_json_output(&output)),
         }
     }
 }
@@ -257,6 +260,7 @@ impl ClientBuilder {
     ///
     /// This allows you to use a pre-built `Config` instance instead of
     /// configuring individual options.
+    #[must_use]
     pub fn config(mut self, config: Config) -> Self {
         self.config = config;
         self
@@ -272,6 +276,7 @@ impl ClientBuilder {
     ///     .system_prompt("You are a Rust expert")
     ///     .build();
     /// ```
+    #[must_use]
     pub fn system_prompt(mut self, prompt: impl Into<String>) -> Self {
         self.config.system_prompt = Some(prompt.into());
         self
@@ -287,6 +292,7 @@ impl ClientBuilder {
     ///     .model("claude-3-opus-20240229")
     ///     .build();
     /// ```
+    #[must_use]
     pub fn model(mut self, model: impl Into<String>) -> Self {
         self.config.model = Some(model.into());
         self
@@ -302,6 +308,7 @@ impl ClientBuilder {
     ///     .allowed_tools(vec!["bash".to_string(), "filesystem".to_string()])
     ///     .build();
     /// ```
+    #[must_use]
     pub fn allowed_tools(mut self, tools: Vec<String>) -> Self {
         self.config.allowed_tools = Some(tools);
         self
@@ -318,6 +325,7 @@ impl ClientBuilder {
     ///     .stream_format(StreamFormat::Json)
     ///     .build();
     /// ```
+    #[must_use]
     pub fn stream_format(mut self, format: StreamFormat) -> Self {
         self.config.stream_format = format;
         self
@@ -333,6 +341,7 @@ impl ClientBuilder {
     ///     .verbose(true)
     ///     .build();
     /// ```
+    #[must_use]
     pub fn verbose(mut self, verbose: bool) -> Self {
         self.config.verbose = verbose;
         self
@@ -348,6 +357,7 @@ impl ClientBuilder {
     ///     .timeout_secs(120)  // 2 minute timeout
     ///     .build();
     /// ```
+    #[must_use]
     pub fn timeout_secs(mut self, timeout_secs: u64) -> Self {
         self.config.timeout_secs = Some(timeout_secs);
         self
@@ -366,6 +376,7 @@ impl ClientBuilder {
     ///     .continue_session()
     ///     .build();
     /// ```
+    #[must_use]
     pub fn continue_session(mut self) -> Self {
         self.config.continue_session = true;
         self
@@ -384,6 +395,7 @@ impl ClientBuilder {
     ///     .resume_session("session_123")
     ///     .build();
     /// ```
+    #[must_use]
     pub fn resume_session(mut self, session_id: impl Into<String>) -> Self {
         self.config.resume_session_id = Some(session_id.into());
         self
@@ -402,6 +414,7 @@ impl ClientBuilder {
     ///     .disallowed_tools(vec!["bash".to_string(), "filesystem".to_string()])
     ///     .build();
     /// ```
+    #[must_use]
     pub fn disallowed_tools(mut self, tools: Vec<String>) -> Self {
         self.config.disallowed_tools = Some(tools);
         self
@@ -420,6 +433,7 @@ impl ClientBuilder {
     ///     .skip_permissions(false)  // Require permission prompts
     ///     .build();
     /// ```
+    #[must_use]
     pub fn skip_permissions(mut self, skip: bool) -> Self {
         self.config.skip_permissions = skip;
         self
@@ -438,6 +452,7 @@ impl ClientBuilder {
     ///     .append_system_prompt("Additionally, be concise in your responses.")
     ///     .build();
     /// ```
+    #[must_use]
     pub fn append_system_prompt(mut self, prompt: impl Into<String>) -> Self {
         self.config.append_system_prompt = Some(prompt.into());
         self
@@ -456,6 +471,7 @@ impl ClientBuilder {
     ///     .max_turns(10)
     ///     .build();
     /// ```
+    #[must_use]
     pub fn max_turns(mut self, turns: u32) -> Self {
         self.config.max_turns = Some(turns);
         self
@@ -474,6 +490,7 @@ impl ClientBuilder {
     ///     .security_level(SecurityLevel::Relaxed)  // Allow more flexible input
     ///     .build();
     /// ```
+    #[must_use]
     pub fn security_level(mut self, level: crate::core::SecurityLevel) -> Self {
         self.config.security_level = level;
         self
@@ -572,6 +589,7 @@ impl QueryBuilder {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use]
     pub fn session(mut self, session_id: SessionId) -> Self {
         self.session_id = Some(session_id);
         self
@@ -598,6 +616,7 @@ impl QueryBuilder {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use]
     pub fn format(mut self, format: StreamFormat) -> Self {
         self.format = Some(format);
         self

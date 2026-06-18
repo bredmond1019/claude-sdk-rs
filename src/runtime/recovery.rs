@@ -32,8 +32,6 @@ struct StreamHealthMetrics {
     successful_connections: AtomicU64,
     /// Total failed connections
     failed_connections: AtomicU64,
-    /// Average connection duration
-    avg_connection_duration: RwLock<Duration>,
     /// Last error timestamp
     last_error: RwLock<Option<Instant>>,
 }
@@ -49,7 +47,6 @@ impl StreamReconnectionManager {
             health_metrics: StreamHealthMetrics {
                 successful_connections: AtomicU64::new(0),
                 failed_connections: AtomicU64::new(0),
-                avg_connection_duration: RwLock::new(Duration::from_secs(0)),
                 last_error: RwLock::new(None),
             },
         }
@@ -244,13 +241,8 @@ impl CircuitBreaker {
         let current_state = self.state.read().await.clone();
         let last_change = *self.last_state_change.read().await;
 
-        match current_state {
-            CircuitState::Open => {
-                if last_change.elapsed() >= self.open_timeout {
-                    self.transition_to(CircuitState::HalfOpen).await;
-                }
-            }
-            _ => {}
+        if current_state == CircuitState::Open && last_change.elapsed() >= self.open_timeout {
+            self.transition_to(CircuitState::HalfOpen).await;
         }
     }
 
@@ -268,7 +260,7 @@ impl CircuitBreaker {
             CircuitState::Closed => {
                 self.failure_count.store(0, Ordering::SeqCst);
             }
-            _ => {}
+            CircuitState::Open => {}
         }
     }
 
@@ -286,7 +278,7 @@ impl CircuitBreaker {
             CircuitState::HalfOpen => {
                 self.transition_to(CircuitState::Open).await;
             }
-            _ => {}
+            CircuitState::Open => {}
         }
     }
 
@@ -330,7 +322,7 @@ impl TokenBucketRateLimiter {
     pub fn new(capacity: u32, refill_rate: f64) -> Self {
         Self {
             capacity,
-            tokens: Arc::new(RwLock::new(capacity as f64)),
+            tokens: Arc::new(RwLock::new(f64::from(capacity))),
             refill_rate,
             last_refill: Arc::new(RwLock::new(Instant::now())),
         }
@@ -342,8 +334,8 @@ impl TokenBucketRateLimiter {
 
         let mut tokens = self.tokens.write().await;
 
-        if *tokens >= tokens_needed as f64 {
-            *tokens -= tokens_needed as f64;
+        if *tokens >= f64::from(tokens_needed) {
+            *tokens -= f64::from(tokens_needed);
             Ok(())
         } else {
             let _wait_time = self.calculate_wait_time(tokens_needed, *tokens);
@@ -359,14 +351,14 @@ impl TokenBucketRateLimiter {
         let tokens_to_add = elapsed.as_secs_f64() * self.refill_rate;
         if tokens_to_add > 0.0 {
             let mut tokens = self.tokens.write().await;
-            *tokens = (*tokens + tokens_to_add).min(self.capacity as f64);
+            *tokens = (*tokens + tokens_to_add).min(f64::from(self.capacity));
             *last_refill = Instant::now();
         }
     }
 
     /// Calculate wait time for tokens
     fn calculate_wait_time(&self, tokens_needed: u32, current_tokens: f64) -> Duration {
-        let tokens_deficit = tokens_needed as f64 - current_tokens;
+        let tokens_deficit = f64::from(tokens_needed) - current_tokens;
         let seconds_to_wait = tokens_deficit / self.refill_rate;
         Duration::from_secs_f64(seconds_to_wait)
     }
@@ -434,12 +426,12 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[ignore] // TODO: Fix closure capture issue - temporarily disabled to unblock CI
+    #[ignore = "TODO: fix closure capture issue; disabled to unblock CI"]
     async fn test_stream_reconnection_manager() {
-        let manager = StreamReconnectionManager::new(3, Duration::from_millis(100));
-
         use std::sync::atomic::{AtomicUsize, Ordering};
         use std::sync::Arc;
+
+        let manager = StreamReconnectionManager::new(3, Duration::from_millis(100));
 
         let attempt_count = Arc::new(AtomicUsize::new(0));
         let result = manager
@@ -462,7 +454,7 @@ mod tests {
         let health = manager.health_status().await;
         assert_eq!(health.total_connections, 3);
         // Allow for floating point precision differences
-        assert!((health.success_rate - 33.33333333333333).abs() < 0.01);
+        assert!((health.success_rate - 100.0 / 3.0).abs() < 0.01);
     }
 
     #[tokio::test]

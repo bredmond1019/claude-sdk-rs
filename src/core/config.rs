@@ -33,6 +33,9 @@ const MAX_TOOL_NAME_LENGTH: usize = 100;
 ///     .allowed_tools(vec!["bash".to_string(), "filesystem".to_string()])
 ///     .build();
 /// ```
+// The flags map one-to-one onto independent `claude` CLI options, so grouping
+// them into a sub-struct would not improve clarity.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     /// Optional system prompt to set the assistant's behavior and context
@@ -218,7 +221,7 @@ pub enum StreamFormat {
     StreamJson,
 }
 
-/// Default value for skip_permissions field
+/// Default value for `skip_permissions` field
 fn default_skip_permissions() -> bool {
     true
 }
@@ -295,6 +298,7 @@ impl Config {
     /// - Timeout is outside valid range
     /// - Max tokens exceeds limit
     /// - Tool names are invalid
+    #[allow(clippy::too_many_lines)] // straight-line sequence of independent field checks
     pub fn validate(&self) -> Result<(), Error> {
         // Validate system prompt length
         if let Some(prompt) = &self.system_prompt {
@@ -316,10 +320,9 @@ impl Config {
 
         // Validate timeout
         if let Some(timeout) = self.timeout_secs {
-            if timeout < MIN_TIMEOUT_SECS || timeout > MAX_TIMEOUT_SECS {
+            if !(MIN_TIMEOUT_SECS..=MAX_TIMEOUT_SECS).contains(&timeout) {
                 return Err(Error::InvalidInput(format!(
-                    "Timeout must be between {} and {} seconds (got {})",
-                    MIN_TIMEOUT_SECS, MAX_TIMEOUT_SECS, timeout
+                    "Timeout must be between {MIN_TIMEOUT_SECS} and {MAX_TIMEOUT_SECS} seconds (got {timeout})"
                 )));
             }
         }
@@ -328,8 +331,7 @@ impl Config {
         if let Some(max_tokens) = self.max_tokens {
             if max_tokens == 0 || max_tokens > MAX_TOKENS_LIMIT {
                 return Err(Error::InvalidInput(format!(
-                    "Max tokens must be between 1 and {} (got {})",
-                    MAX_TOKENS_LIMIT, max_tokens
+                    "Max tokens must be between 1 and {MAX_TOKENS_LIMIT} (got {max_tokens})"
                 )));
             }
         }
@@ -339,16 +341,14 @@ impl Config {
             for tool in tools {
                 if tool.is_empty() || tool.len() > MAX_TOOL_NAME_LENGTH {
                     return Err(Error::InvalidInput(format!(
-                        "Tool name length must be between 1 and {} characters (got '{}')",
-                        MAX_TOOL_NAME_LENGTH, tool
+                        "Tool name length must be between 1 and {MAX_TOOL_NAME_LENGTH} characters (got '{tool}')"
                     )));
                 }
 
                 // Use enhanced granular permission parsing and validation
                 if let Err(e) = crate::core::types::ToolPermission::parse_granular(tool) {
                     return Err(Error::InvalidInput(format!(
-                        "Invalid tool permission format: '{}'. Error: {}",
-                        tool, e
+                        "Invalid tool permission format: '{tool}'. Error: {e}"
                     )));
                 }
             }
@@ -359,16 +359,14 @@ impl Config {
             for tool in tools {
                 if tool.is_empty() || tool.len() > MAX_TOOL_NAME_LENGTH {
                     return Err(Error::InvalidInput(format!(
-                        "Disallowed tool name length must be between 1 and {} characters (got '{}')",
-                        MAX_TOOL_NAME_LENGTH, tool
+                        "Disallowed tool name length must be between 1 and {MAX_TOOL_NAME_LENGTH} characters (got '{tool}')"
                     )));
                 }
 
                 // Use enhanced granular permission parsing and validation
                 if let Err(e) = crate::core::types::ToolPermission::parse_granular(tool) {
                     return Err(Error::InvalidInput(format!(
-                        "Invalid disallowed tool permission format: '{}'. Error: {}",
-                        tool, e
+                        "Invalid disallowed tool permission format: '{tool}'. Error: {e}"
                     )));
                 }
             }
@@ -397,8 +395,7 @@ impl Config {
             for tool in disallowed {
                 if allowed.contains(tool) {
                     return Err(Error::InvalidInput(format!(
-                        "Tool '{}' cannot be both allowed and disallowed",
-                        tool
+                        "Tool '{tool}' cannot be both allowed and disallowed"
                     )));
                 }
             }
@@ -879,7 +876,10 @@ pub fn validate_query(query: &str) -> Result<(), Error> {
 /// - Query exceeds maximum length
 /// - Query contains malicious content (based on security level)
 /// - Query is empty
-pub fn validate_query_with_security_level(query: &str, security_level: SecurityLevel) -> Result<(), Error> {
+pub fn validate_query_with_security_level(
+    query: &str,
+    security_level: SecurityLevel,
+) -> Result<(), Error> {
     if query.is_empty() {
         return Err(Error::InvalidInput("Query cannot be empty".to_string()));
     }
@@ -924,12 +924,15 @@ pub fn validate_query_with_security_level(query: &str, security_level: SecurityL
 /// Check if a string contains potentially malicious patterns
 fn contains_malicious_patterns(text: &str) -> bool {
     // Early return for obviously safe patterns
-    if text.chars().all(|c| c.is_alphanumeric() || c.is_whitespace() || c == '-' || c == '_' || c == '.') {
+    if text
+        .chars()
+        .all(|c| c.is_alphanumeric() || c.is_whitespace() || c == '-' || c == '_' || c == '.')
+    {
         return false;
     }
 
     let lower_text = text.to_lowercase();
-    
+
     // Check for definite malicious patterns (keep these strict)
     let strict_patterns = [
         // Script injection
@@ -950,49 +953,54 @@ fn contains_malicious_patterns(text: &str) -> bool {
         // Null bytes
         "\0",
     ];
-    
-    if strict_patterns.iter().any(|pattern| lower_text.contains(pattern)) {
+
+    if strict_patterns
+        .iter()
+        .any(|pattern| lower_text.contains(pattern))
+    {
         return true;
     }
-    
+
     // For command injection patterns, use more context-aware checks
     // Check if multiple suspicious patterns appear together
-    let command_indicators = [
-        ("$(", ")"),
-        ("${", "}"),
-        ("&&", ""),
-        ("||", ""),
-        (";", ""),
-        ("|", ""),
-    ];
-    
+    let command_indicators =
+        [("$(", ")"), ("${", "}"), ("&&", ""), ("||", ""), (";", ""), ("|", "")];
+
     let mut suspicious_count = 0;
     for (start, _) in &command_indicators {
         if text.contains(start) {
             suspicious_count += 1;
         }
     }
-    
+
     // Flag if multiple command injection patterns are present
     // or if && or || appear (common command chaining)
     // or if $( or ${ appear (command substitution)
     // or if ; followed by dangerous commands
-    if suspicious_count >= 2 || text.contains("&&") || text.contains("||") 
-       || text.contains("$(") || text.contains("${") {
+    if suspicious_count >= 2
+        || text.contains("&&")
+        || text.contains("||")
+        || text.contains("$(")
+        || text.contains("${")
+    {
         return true;
     }
-    
+
     // Check for semicolon or pipe followed by dangerous commands
     if text.contains(';') || text.contains('|') {
-        let dangerous_commands = ["rm", "del", "format", "fdisk", "chmod", "chown", "malicious_command"];
+        let dangerous_commands =
+            ["rm", "del", "format", "fdisk", "chmod", "chown", "malicious_command"];
         for cmd in &dangerous_commands {
-            if text.contains(&format!("; {}", cmd)) || text.contains(&format!(";{}", cmd)) ||
-               text.contains(&format!("| {}", cmd)) || text.contains(&format!("|{}", cmd)) {
+            if text.contains(&format!("; {cmd}"))
+                || text.contains(&format!(";{cmd}"))
+                || text.contains(&format!("| {cmd}"))
+                || text.contains(&format!("|{cmd}"))
+            {
                 return true;
             }
         }
     }
-    
+
     // Check for backticks only if they appear to be command substitution
     if text.contains('`') {
         // Allow single backticks for markdown code formatting
@@ -1004,21 +1012,25 @@ fn contains_malicious_patterns(text: &str) -> bool {
             }
         }
     }
-    
+
     // Check for redirection only in suspicious contexts
-    if (text.contains('>') || text.contains('<')) && 
-       (text.contains("2>") || text.contains("&>") || text.contains("1>") || 
-        text.contains("<(") || text.contains(">(")) {
+    if (text.contains('>') || text.contains('<'))
+        && (text.contains("2>")
+            || text.contains("&>")
+            || text.contains("1>")
+            || text.contains("<(")
+            || text.contains(">("))
+    {
         return true;
     }
-    
+
     false
 }
 
 /// Check for only the most obvious malicious patterns (relaxed mode)
 fn contains_obvious_malicious_patterns(text: &str) -> bool {
     let lower_text = text.to_lowercase();
-    
+
     // Only check for very obvious attack patterns
     let obvious_patterns = [
         // Script injection
@@ -1035,33 +1047,56 @@ fn contains_obvious_malicious_patterns(text: &str) -> bool {
         // Null bytes
         "\0",
     ];
-    
-    obvious_patterns.iter().any(|pattern| lower_text.contains(pattern))
+
+    obvious_patterns
+        .iter()
+        .any(|pattern| lower_text.contains(pattern))
 }
 
-/// Check using strict patterns (strict mode) 
+/// Check using strict patterns (strict mode)
 fn contains_strict_malicious_patterns(text: &str) -> bool {
     // Block if text contains any special characters commonly used in attacks
-    let has_special_chars = text.chars().any(|c| matches!(c, 
-        '`' | '$' | '{' | '}' | '(' | ')' | '[' | ']' | 
-        ';' | '|' | '&' | '<' | '>' | '"' | '\'' | '\\' | 
-        '\n' | '\r' | '\t' | '\0'
-    ));
-    
+    let has_special_chars = text.chars().any(|c| {
+        matches!(
+            c,
+            '`' | '$'
+                | '{'
+                | '}'
+                | '('
+                | ')'
+                | '['
+                | ']'
+                | ';'
+                | '|'
+                | '&'
+                | '<'
+                | '>'
+                | '"'
+                | '\''
+                | '\\'
+                | '\n'
+                | '\r'
+                | '\t'
+                | '\0'
+        )
+    });
+
     if has_special_chars {
         return true;
     }
-    
+
     // Also check for encoded patterns
     let lower_text = text.to_lowercase();
     let encoded_patterns = [
-        "%3c", // <
-        "%3e", // >
-        "%22", // "
-        "%27", // '
+        "%3c",    // <
+        "%3e",    // >
+        "%22",    // "
+        "%27",    // '
         "%2e%2e", // ..
-        "%00", // null byte
+        "%00",    // null byte
     ];
-    
-    encoded_patterns.iter().any(|pattern| lower_text.contains(pattern))
+
+    encoded_patterns
+        .iter()
+        .any(|pattern| lower_text.contains(pattern))
 }

@@ -33,6 +33,7 @@ mod config_defaults_tests {
     }
 
     #[test]
+    #[allow(clippy::match_same_arms)] // exhaustiveness checks; empty arms are intentional
     fn test_stream_format_variants() {
         // Test all StreamFormat variants exist and are properly named
         match StreamFormat::Text {
@@ -251,7 +252,7 @@ mod system_prompt_tests {
     fn test_empty_system_prompt() {
         let config = Config::builder().system_prompt("").build().unwrap();
 
-        assert_eq!(config.system_prompt, Some("".to_string()));
+        assert_eq!(config.system_prompt, Some(String::new()));
     }
 
     #[test]
@@ -394,7 +395,7 @@ mod config_cloning_tests {
             .build()
             .unwrap();
 
-        let debug_str = format!("{:?}", config);
+        let debug_str = format!("{config:?}");
         assert!(debug_str.contains("claude-3-sonnet-20240229"));
     }
 
@@ -417,7 +418,7 @@ mod config_cloning_tests {
 #[cfg(test)]
 mod config_edge_cases {
     use super::*;
-    use crate::core::{SecurityLevel, validate_query_with_security_level};
+    use crate::core::{validate_query_with_security_level, SecurityLevel};
 
     #[test]
     fn test_config_with_none_values() {
@@ -452,8 +453,8 @@ mod config_edge_cases {
         // Empty strings are allowed - no validation on model/prompt content
         assert!(result.is_ok());
         let config = result.unwrap();
-        assert_eq!(config.model, Some("".to_string()));
-        assert_eq!(config.system_prompt, Some("".to_string()));
+        assert_eq!(config.model, Some(String::new()));
+        assert_eq!(config.system_prompt, Some(String::new()));
     }
 
     #[test]
@@ -496,28 +497,34 @@ mod config_edge_cases {
         let markdown_query = "How do I use `backticks` in markdown?";
         let command_query = "Run ls -la && pwd";
         let script_query = "<script>alert('test')</script>";
-        
+
         // Strict mode - blocks most special characters
         assert!(validate_query_with_security_level(safe_query, SecurityLevel::Strict).is_ok());
         assert!(validate_query_with_security_level(markdown_query, SecurityLevel::Strict).is_err());
         assert!(validate_query_with_security_level(command_query, SecurityLevel::Strict).is_err());
         assert!(validate_query_with_security_level(script_query, SecurityLevel::Strict).is_err());
-        
+
         // Balanced mode - context-aware
         assert!(validate_query_with_security_level(safe_query, SecurityLevel::Balanced).is_ok());
-        assert!(validate_query_with_security_level(markdown_query, SecurityLevel::Balanced).is_ok());
-        assert!(validate_query_with_security_level(command_query, SecurityLevel::Balanced).is_err());
+        assert!(
+            validate_query_with_security_level(markdown_query, SecurityLevel::Balanced).is_ok()
+        );
+        assert!(
+            validate_query_with_security_level(command_query, SecurityLevel::Balanced).is_err()
+        );
         assert!(validate_query_with_security_level(script_query, SecurityLevel::Balanced).is_err());
-        
+
         // Relaxed mode - only obvious attacks
         assert!(validate_query_with_security_level(safe_query, SecurityLevel::Relaxed).is_ok());
         assert!(validate_query_with_security_level(markdown_query, SecurityLevel::Relaxed).is_ok());
         assert!(validate_query_with_security_level(command_query, SecurityLevel::Relaxed).is_ok());
         assert!(validate_query_with_security_level(script_query, SecurityLevel::Relaxed).is_err());
-        
+
         // Disabled mode - allows everything
         assert!(validate_query_with_security_level(safe_query, SecurityLevel::Disabled).is_ok());
-        assert!(validate_query_with_security_level(markdown_query, SecurityLevel::Disabled).is_ok());
+        assert!(
+            validate_query_with_security_level(markdown_query, SecurityLevel::Disabled).is_ok()
+        );
         assert!(validate_query_with_security_level(command_query, SecurityLevel::Disabled).is_ok());
         assert!(validate_query_with_security_level(script_query, SecurityLevel::Disabled).is_ok());
     }
@@ -525,16 +532,37 @@ mod config_edge_cases {
     #[test]
     fn test_balanced_mode_specific_cases() {
         // Test that "create project-design-doc.md" now passes in balanced mode
-        assert!(validate_query_with_security_level("create project-design-doc.md", SecurityLevel::Balanced).is_ok());
-        
+        assert!(validate_query_with_security_level(
+            "create project-design-doc.md",
+            SecurityLevel::Balanced
+        )
+        .is_ok());
+
         // Test other legitimate queries
-        assert!(validate_query_with_security_level("The price is $100", SecurityLevel::Balanced).is_ok());
-        assert!(validate_query_with_security_level("Email: user@example.com", SecurityLevel::Balanced).is_ok());
-        assert!(validate_query_with_security_level("git commit -m 'Initial commit'", SecurityLevel::Balanced).is_ok());
-        
+        assert!(
+            validate_query_with_security_level("The price is $100", SecurityLevel::Balanced)
+                .is_ok()
+        );
+        assert!(validate_query_with_security_level(
+            "Email: user@example.com",
+            SecurityLevel::Balanced
+        )
+        .is_ok());
+        assert!(validate_query_with_security_level(
+            "git commit -m 'Initial commit'",
+            SecurityLevel::Balanced
+        )
+        .is_ok());
+
         // Test that actual malicious patterns still fail
-        assert!(validate_query_with_security_level("$(rm -rf /)", SecurityLevel::Balanced).is_err());
-        assert!(validate_query_with_security_level("'; DROP TABLE users;--", SecurityLevel::Balanced).is_err());
+        assert!(
+            validate_query_with_security_level("$(rm -rf /)", SecurityLevel::Balanced).is_err()
+        );
+        assert!(validate_query_with_security_level(
+            "'; DROP TABLE users;--",
+            SecurityLevel::Balanced
+        )
+        .is_err());
     }
 }
 
@@ -686,7 +714,7 @@ mod config_validation_edge_cases {
     fn test_config_with_invalid_tool_names() {
         // Test that invalid tool names fail validation
         let invalid_tools = vec![
-            vec!["".to_string()],                 // Empty
+            vec![String::new()],                  // Empty
             vec![" ".to_string()],                // Whitespace
             vec!["tool with spaces".to_string()], // Spaces
             vec!["tool@#$%".to_string()],         // Special chars
@@ -827,7 +855,7 @@ mod validation_tests {
     fn test_tool_name_validation() {
         // Invalid tool names
         let invalid_tools = vec![
-            vec!["".to_string()],  // Empty name
+            vec![String::new()],   // Empty name
             vec!["a".repeat(101)], // Too long
             vec!["tool with spaces".to_string()],
             vec!["tool@#$".to_string()],
@@ -1138,7 +1166,7 @@ mod new_config_validation_tests {
     fn test_disallowed_tools_validation() {
         // Empty tool name should fail
         let result = Config::builder()
-            .disallowed_tools(vec!["".to_string()])
+            .disallowed_tools(vec![String::new()])
             .build();
         assert!(result.is_err());
 
@@ -1173,7 +1201,7 @@ mod new_config_validation_tests {
     #[test]
     fn test_session_id_validation() {
         // Empty session ID should fail
-        let result = Config::builder().resume_session("".to_string()).build();
+        let result = Config::builder().resume_session(String::new()).build();
         assert!(result.is_err());
         if let Err(e) = result {
             assert!(e.to_string().contains("Resume session ID cannot be empty"));
@@ -1228,9 +1256,7 @@ mod new_config_validation_tests {
         assert!(result.is_ok());
 
         // Multiple disallowed tools
-        let many_tools: Vec<String> = (0..100)
-            .map(|i| format!("mcp__server__tool_{}", i))
-            .collect();
+        let many_tools: Vec<String> = (0..100).map(|i| format!("mcp__server__tool_{i}")).collect();
         let result = Config::builder().disallowed_tools(many_tools).build();
         assert!(result.is_ok());
 
@@ -1265,8 +1291,7 @@ mod granular_permission_tests {
             };
             assert!(
                 config.validate().is_ok(),
-                "Valid bash permission '{}' should pass validation",
-                permission
+                "Valid bash permission '{permission}' should pass validation"
             );
         }
     }
@@ -1287,8 +1312,7 @@ mod granular_permission_tests {
             };
             assert!(
                 config.validate().is_ok(),
-                "Valid MCP permission '{}' should pass validation",
-                permission
+                "Valid MCP permission '{permission}' should pass validation"
             );
         }
     }
@@ -1304,7 +1328,7 @@ mod granular_permission_tests {
             "mcp__server__".to_string(),  // Empty tool
             "Shell(ls)".to_string(),      // Wrong tool name
             "unknown_format".to_string(), // Unknown format
-            "".to_string(),               // Empty string
+            String::new(),                // Empty string
         ];
 
         for permission in invalid_permissions {
@@ -1314,8 +1338,7 @@ mod granular_permission_tests {
             };
             assert!(
                 config.validate().is_err(),
-                "Invalid permission '{}' should fail validation",
-                permission
+                "Invalid permission '{permission}' should fail validation"
             );
         }
     }
@@ -1331,8 +1354,8 @@ mod granular_permission_tests {
             ..Config::default()
         };
         match config.validate() {
-            Ok(_) => {}
-            Err(e) => panic!("Expected config validation to pass but got error: {}", e),
+            Ok(()) => {}
+            Err(e) => panic!("Expected config validation to pass but got error: {e}"),
         }
 
         // Test invalid disallowed tools
@@ -1395,16 +1418,12 @@ mod granular_permission_tests {
             let parsed = ToolPermission::from_str(permission_str).unwrap();
             assert_eq!(
                 parsed, expected,
-                "Permission '{}' should parse to {:?}",
-                permission_str, expected
+                "Permission '{permission_str}' should parse to {expected:?}"
             );
 
             // Test that parsed permissions convert to proper CLI format
             let cli_format = parsed.to_cli_format();
-            println!(
-                "Permission '{}' -> Parsed: {:?} -> CLI: '{}'",
-                permission_str, parsed, cli_format
-            );
+            println!("Permission '{permission_str}' -> Parsed: {parsed:?} -> CLI: '{cli_format}'");
         }
     }
 
@@ -1437,7 +1456,7 @@ mod granular_permission_tests {
     fn test_granular_permission_length_validation() {
         // Test that very long permission strings are rejected
         let long_command = "a".repeat(300); // Exceeds MAX_TOOL_NAME_LENGTH
-        let long_permission = format!("Bash({})", long_command);
+        let long_permission = format!("Bash({long_command})");
 
         let config = Config {
             allowed_tools: Some(vec![long_permission]),

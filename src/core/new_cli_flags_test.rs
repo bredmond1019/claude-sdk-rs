@@ -321,8 +321,7 @@ mod granular_permissions_tests {
 
             assert!(
                 result.is_err(),
-                "Invalid permission '{}' should fail validation",
-                invalid_permission
+                "Invalid permission '{invalid_permission}' should fail validation"
             );
 
             // Check error message contains helpful information
@@ -332,9 +331,7 @@ mod granular_permissions_tests {
                     error_msg.contains("Invalid tool permission format")
                         || error_msg.contains("Tool name length must be")
                         || error_msg.contains("Unknown tool permission format"),
-                    "Error message should be informative for '{}': {}",
-                    invalid_permission,
-                    error_msg
+                    "Error message should be informative for '{invalid_permission}': {error_msg}"
                 );
             }
         }
@@ -365,8 +362,7 @@ mod granular_permissions_tests {
             // Should be equivalent
             assert_eq!(
                 parsed, reparsed,
-                "Roundtrip failed for '{}': parsed={:?}, cli_format='{}', reparsed={:?}",
-                permission_str, parsed, cli_format, reparsed
+                "Roundtrip failed for '{permission_str}': parsed={parsed:?}, cli_format='{cli_format}', reparsed={reparsed:?}"
             );
         }
     }
@@ -424,15 +420,13 @@ mod flag_interaction_tests {
 
         for (allowed, disallowed) in conflict_cases {
             let result = Config::builder()
-                .allowed_tools(allowed.iter().map(|s| s.to_string()).collect())
-                .disallowed_tools(disallowed.iter().map(|s| s.to_string()).collect())
+                .allowed_tools(allowed.iter().map(|s| (*s).to_string()).collect())
+                .disallowed_tools(disallowed.iter().map(|s| (*s).to_string()).collect())
                 .build();
 
             assert!(
                 result.is_err(),
-                "Conflict should be detected for allowed={:?}, disallowed={:?}",
-                allowed,
-                disallowed
+                "Conflict should be detected for allowed={allowed:?}, disallowed={disallowed:?}"
             );
         }
 
@@ -454,15 +448,13 @@ mod flag_interaction_tests {
 
         for (allowed, disallowed) in non_conflict_cases {
             let result = Config::builder()
-                .allowed_tools(allowed.iter().map(|s| s.to_string()).collect())
-                .disallowed_tools(disallowed.iter().map(|s| s.to_string()).collect())
+                .allowed_tools(allowed.iter().map(|s| (*s).to_string()).collect())
+                .disallowed_tools(disallowed.iter().map(|s| (*s).to_string()).collect())
                 .build();
 
             assert!(
                 result.is_ok(),
-                "No conflict should be detected for allowed={:?}, disallowed={:?}",
-                allowed,
-                disallowed
+                "No conflict should be detected for allowed={allowed:?}, disallowed={disallowed:?}"
             );
         }
     }
@@ -538,7 +530,7 @@ mod error_handling_tests {
         let valid_turns = vec![1, 5, 10, 100, u32::MAX];
         for turns in valid_turns {
             let result = Config::builder().max_turns(turns).build();
-            assert!(result.is_ok(), "Valid max_turns {} should pass", turns);
+            assert!(result.is_ok(), "Valid max_turns {turns} should pass");
         }
     }
 
@@ -584,8 +576,7 @@ mod error_handling_tests {
             let result = Config::builder().append_system_prompt(prompt).build();
             assert!(
                 result.is_ok(),
-                "Valid append_system_prompt '{}' should pass",
-                prompt
+                "Valid append_system_prompt '{prompt}' should pass"
             );
         }
     }
@@ -594,7 +585,7 @@ mod error_handling_tests {
     fn test_disallowed_tools_validation_errors() {
         // Empty tool names should fail
         let result = Config::builder()
-            .disallowed_tools(vec!["".to_string()])
+            .disallowed_tools(vec![String::new()])
             .build();
         assert!(result.is_err());
 
@@ -614,7 +605,7 @@ mod error_handling_tests {
             let result = Config::builder()
                 .disallowed_tools(vec![tool.to_string()])
                 .build();
-            assert!(result.is_err(), "Invalid tool '{}' should fail", tool);
+            assert!(result.is_err(), "Invalid tool '{tool}' should fail");
         }
     }
 
@@ -665,9 +656,7 @@ mod error_handling_tests {
             if let Err(e) = result {
                 assert!(
                     e.to_string().contains(expected_fragment),
-                    "Error message '{}' should contain '{}'",
-                    e.to_string(),
-                    expected_fragment
+                    "Error message '{e}' should contain '{expected_fragment}'"
                 );
             }
         }
@@ -700,8 +689,7 @@ mod security_validation_tests {
             let result = Config::builder().append_system_prompt(pattern).build();
             assert!(
                 result.is_err(),
-                "Malicious pattern '{}' should be rejected",
-                pattern
+                "Malicious pattern '{pattern}' should be rejected"
             );
 
             if let Err(e) = result {
@@ -727,14 +715,18 @@ mod security_validation_tests {
             let permission = ToolPermission::from_str(command);
             assert!(
                 permission.is_ok(),
-                "Dangerous command '{}' should parse (to be controlled via disallowed_tools)",
-                command
+                "Dangerous command '{command}' should parse (to be controlled via disallowed_tools)"
             );
         }
 
         // Test that they can be properly disallowed
         let config = Config::builder()
-            .disallowed_tools(dangerous_commands.iter().map(|s| s.to_string()).collect())
+            .disallowed_tools(
+                dangerous_commands
+                    .iter()
+                    .map(|s| (*s).to_string())
+                    .collect(),
+            )
             .build();
         assert!(config.is_ok());
     }
@@ -753,8 +745,7 @@ mod security_validation_tests {
             let result = Config::builder().append_system_prompt(prompt).build();
             assert!(
                 result.is_ok(),
-                "Unicode prompt '{}' should be allowed",
-                prompt
+                "Unicode prompt '{prompt}' should be allowed"
             );
         }
 
@@ -804,9 +795,9 @@ mod security_validation_tests {
         for (turns, should_pass) in boundary_values {
             let result = Config::builder().max_turns(turns).build();
             if should_pass {
-                assert!(result.is_ok(), "max_turns {} should be valid", turns);
+                assert!(result.is_ok(), "max_turns {turns} should be valid");
             } else {
-                assert!(result.is_err(), "max_turns {} should be invalid", turns);
+                assert!(result.is_err(), "max_turns {turns} should be invalid");
             }
         }
 
@@ -836,13 +827,12 @@ mod security_validation_tests {
 
             // Some may fail parsing, others may fail validation
             // The key is they should be handled safely
-            if result.is_err() {
+            if let Err(err) = result {
                 // Error should be descriptive - just check that there's an error
-                let error_msg = result.unwrap_err().to_string();
+                let error_msg = err.to_string();
                 assert!(
                     !error_msg.is_empty(),
-                    "Error message should be present for injection attempt '{}'",
-                    attempt
+                    "Error message should be present for injection attempt '{attempt}'"
                 );
 
                 // Check that common error patterns are present
@@ -851,9 +841,7 @@ mod security_validation_tests {
                         || error_msg.contains("malicious")
                         || error_msg.contains("Unknown")
                         || error_msg.contains("format"),
-                    "Error message should indicate validation failure for '{}': {}",
-                    attempt,
-                    error_msg
+                    "Error message should indicate validation failure for '{attempt}': {error_msg}"
                 );
             }
         }
@@ -871,7 +859,7 @@ mod performance_tests {
     #[test]
     fn test_large_number_of_disallowed_tools() {
         // Test with many disallowed tools
-        let many_tools: Vec<String> = (0..1000).map(|i| format!("Bash(tool_{})", i)).collect();
+        let many_tools: Vec<String> = (0..1000).map(|i| format!("Bash(tool_{i})")).collect();
 
         let start = std::time::Instant::now();
         let result = Config::builder()
@@ -885,8 +873,7 @@ mod performance_tests {
         // Should complete reasonably quickly (adjust threshold as needed)
         assert!(
             duration.as_millis() < 1000,
-            "Validation took too long: {:?}",
-            duration
+            "Validation took too long: {duration:?}"
         );
     }
 
@@ -907,8 +894,7 @@ mod performance_tests {
         // Should complete reasonably quickly
         assert!(
             duration.as_millis() < 100,
-            "Validation took too long: {:?}",
-            duration
+            "Validation took too long: {duration:?}"
         );
     }
 
@@ -938,8 +924,7 @@ mod performance_tests {
         // Even with validation failure, should complete quickly
         assert!(
             duration.as_millis() < 100,
-            "Config building took too long: {:?}",
-            duration
+            "Config building took too long: {duration:?}"
         );
     }
 
@@ -962,8 +947,7 @@ mod performance_tests {
         // 1000 validations should complete quickly
         assert!(
             duration.as_millis() < 100,
-            "Repeated validation took too long: {:?}",
-            duration
+            "Repeated validation took too long: {duration:?}"
         );
     }
 }
