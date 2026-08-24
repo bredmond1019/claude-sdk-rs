@@ -10,7 +10,7 @@ use crate::mcp::core::external_mcp::{
 };
 use crate::mcp::core::nodes::Node;
 use crate::mcp::core::task::TaskContext;
-use crate::mcp::protocol::{CallToolResult, ToolDefinition};
+use crate::mcp::protocol::{CallToolResult, ToolContent, ToolDefinition};
 
 /// Notion-specific configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

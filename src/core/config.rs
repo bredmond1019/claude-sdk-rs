@@ -113,61 +113,6 @@ pub struct Config {
     /// Increase this for complex queries that might take longer to process.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timeout_secs: Option<u64>,
-
-    /// Whether to continue the last session
-    ///
-    /// When `true`, adds the `--continue` flag to resume the most recent
-    /// conversation session. This allows for conversation continuity
-    /// across multiple API calls.
-    #[serde(default)]
-    pub continue_session: bool,
-
-    /// Session ID to resume
-    ///
-    /// When set, adds the `--resume` flag with the specified session ID
-    /// to continue a specific conversation session. This allows for
-    /// resuming conversations from a particular point.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub resume_session_id: Option<String>,
-
-    /// Additional system prompt to append
-    ///
-    /// When set, adds the `--append-system-prompt` flag to extend the
-    /// existing system prompt. Cannot be used together with `system_prompt`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub append_system_prompt: Option<String>,
-
-    /// List of tools that Claude is NOT allowed to use
-    ///
-    /// Tools are specified using the same format as `allowed_tools`.
-    /// This provides fine-grained control over tool restrictions.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub disallowed_tools: Option<Vec<String>>,
-
-    /// Maximum number of conversation turns
-    ///
-    /// When set, limits the conversation to the specified number of
-    /// back-and-forth exchanges. Useful for controlling conversation length.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub max_turns: Option<u32>,
-
-    /// Whether to skip permission prompts (default: true)
-    ///
-    /// When `true`, adds the `--dangerously-skip-permissions` flag to
-    /// bypass tool permission prompts. This is enabled by default for
-    /// programmatic use but can be disabled for additional security.
-    #[serde(default = "default_skip_permissions")]
-    pub skip_permissions: bool,
-
-    /// Security validation strictness level
-    ///
-    /// Controls how strictly user input is validated for potential security threats.
-    /// - `Strict`: Blocks most special characters and patterns
-    /// - `Balanced`: Context-aware validation (default)
-    /// - `Relaxed`: Only blocks obvious attack patterns
-    /// - `Disabled`: No security validation (use with caution)
-    #[serde(default)]
-    pub security_level: SecurityLevel,
 }
 
 /// Output format for Claude CLI responses
@@ -218,26 +163,6 @@ pub enum StreamFormat {
     StreamJson,
 }
 
-/// Default value for skip_permissions field
-fn default_skip_permissions() -> bool {
-    true
-}
-
-/// Security validation strictness level
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum SecurityLevel {
-    /// Strict security - blocks most special characters and patterns
-    Strict,
-    /// Balanced security - context-aware validation (default)
-    #[default]
-    Balanced,
-    /// Relaxed security - only blocks obvious attack patterns
-    Relaxed,
-    /// Disabled - no security validation (use with caution)
-    Disabled,
-}
-
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -250,13 +175,6 @@ impl Default for Config {
             verbose: false,
             max_tokens: None,
             timeout_secs: Some(30), // Default 30 second timeout
-            continue_session: false,
-            resume_session_id: None,
-            append_system_prompt: None,
-            disallowed_tools: None,
-            max_turns: None,
-            skip_permissions: default_skip_permissions(),
-            security_level: SecurityLevel::default(),
         }
     }
 }
@@ -334,7 +252,7 @@ impl Config {
             }
         }
 
-        // Validate allowed tools with granular permission parsing
+        // Validate allowed tools
         if let Some(tools) = &self.allowed_tools {
             for tool in tools {
                 if tool.is_empty() || tool.len() > MAX_TOOL_NAME_LENGTH {
@@ -344,31 +262,11 @@ impl Config {
                     )));
                 }
 
-                // Use enhanced granular permission parsing and validation
-                if let Err(e) = crate::core::types::ToolPermission::parse_granular(tool) {
+                // Validate tool name format
+                if !is_valid_tool_name(tool) {
                     return Err(Error::InvalidInput(format!(
-                        "Invalid tool permission format: '{}'. Error: {}",
-                        tool, e
-                    )));
-                }
-            }
-        }
-
-        // Validate disallowed tools with granular permission parsing
-        if let Some(tools) = &self.disallowed_tools {
-            for tool in tools {
-                if tool.is_empty() || tool.len() > MAX_TOOL_NAME_LENGTH {
-                    return Err(Error::InvalidInput(format!(
-                        "Disallowed tool name length must be between 1 and {} characters (got '{}')",
-                        MAX_TOOL_NAME_LENGTH, tool
-                    )));
-                }
-
-                // Use enhanced granular permission parsing and validation
-                if let Err(e) = crate::core::types::ToolPermission::parse_granular(tool) {
-                    return Err(Error::InvalidInput(format!(
-                        "Invalid disallowed tool permission format: '{}'. Error: {}",
-                        tool, e
+                        "Invalid tool name format: '{}'. Tool names must contain only alphanumeric characters, underscores, hyphens, and colons",
+                        tool
                     )));
                 }
             }
@@ -379,76 +277,6 @@ impl Config {
             if path.as_os_str().is_empty() {
                 return Err(Error::InvalidInput(
                     "MCP config path cannot be empty".to_string(),
-                ));
-            }
-        }
-
-        // Validate max_turns is positive when set
-        if let Some(turns) = self.max_turns {
-            if turns == 0 {
-                return Err(Error::InvalidInput(
-                    "Max turns must be greater than 0".to_string(),
-                ));
-            }
-        }
-
-        // Validate no conflicts between allowed_tools and disallowed_tools
-        if let (Some(allowed), Some(disallowed)) = (&self.allowed_tools, &self.disallowed_tools) {
-            for tool in disallowed {
-                if allowed.contains(tool) {
-                    return Err(Error::InvalidInput(format!(
-                        "Tool '{}' cannot be both allowed and disallowed",
-                        tool
-                    )));
-                }
-            }
-        }
-
-        // Validate system_prompt and append_system_prompt aren't both set
-        if self.system_prompt.is_some() && self.append_system_prompt.is_some() {
-            return Err(Error::InvalidInput(
-                "Cannot use both system_prompt and append_system_prompt simultaneously".to_string(),
-            ));
-        }
-
-        // Validate append_system_prompt length
-        if let Some(prompt) = &self.append_system_prompt {
-            if prompt.len() > MAX_SYSTEM_PROMPT_LENGTH {
-                return Err(Error::InvalidInput(format!(
-                    "Append system prompt exceeds maximum length of {} characters (got {})",
-                    MAX_SYSTEM_PROMPT_LENGTH,
-                    prompt.len()
-                )));
-            }
-
-            if contains_malicious_patterns(prompt) {
-                return Err(Error::InvalidInput(
-                    "Append system prompt contains potentially malicious content".to_string(),
-                ));
-            }
-        }
-
-        // Validate session ID format for resume functionality
-        if let Some(session_id) = &self.resume_session_id {
-            if session_id.is_empty() {
-                return Err(Error::InvalidInput(
-                    "Resume session ID cannot be empty".to_string(),
-                ));
-            }
-
-            if session_id.len() > 100 {
-                return Err(Error::InvalidInput(
-                    "Resume session ID exceeds maximum length of 100 characters".to_string(),
-                ));
-            }
-
-            // Basic format validation - session IDs should be alphanumeric with limited special chars
-            if !session_id
-                .chars()
-                .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
-            {
-                return Err(Error::InvalidInput(
-                    "Resume session ID contains invalid characters. Only alphanumeric, underscore, and hyphen are allowed".to_string(),
                 ));
             }
         }
@@ -680,152 +508,6 @@ impl ConfigBuilder {
         self
     }
 
-    /// Enable session continuation
-    ///
-    /// When enabled, adds the `--continue` flag to resume the most recent
-    /// conversation session, allowing for conversation continuity.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use claude_sdk_rs_core::Config;
-    ///
-    /// let config = Config::builder()
-    ///     .continue_session()
-    ///     .build();
-    /// ```
-    #[must_use]
-    pub fn continue_session(mut self) -> Self {
-        self.config.continue_session = true;
-        self
-    }
-
-    /// Set a specific session ID to resume
-    ///
-    /// When set, adds the `--resume` flag with the specified session ID
-    /// to continue a specific conversation session.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use claude_sdk_rs_core::Config;
-    ///
-    /// let config = Config::builder()
-    ///     .resume_session("session_123".to_string())
-    ///     .build();
-    /// ```
-    #[must_use]
-    pub fn resume_session(mut self, session_id: String) -> Self {
-        self.config.resume_session_id = Some(session_id);
-        self
-    }
-
-    /// Set an additional system prompt to append
-    ///
-    /// When set, adds the `--append-system-prompt` flag to extend the
-    /// existing system prompt. Cannot be used with `system_prompt`.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use claude_sdk_rs_core::Config;
-    ///
-    /// let config = Config::builder()
-    ///     .append_system_prompt("Additionally, be concise in your responses.")
-    ///     .build();
-    /// ```
-    #[must_use]
-    pub fn append_system_prompt(mut self, prompt: impl Into<String>) -> Self {
-        self.config.append_system_prompt = Some(prompt.into());
-        self
-    }
-
-    /// Set the list of disallowed tools
-    ///
-    /// Controls which tools Claude cannot access during execution.
-    /// Provides fine-grained control over tool restrictions.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use claude_sdk_rs_core::Config;
-    ///
-    /// let config = Config::builder()
-    ///     .disallowed_tools(vec![
-    ///         "bash".to_string(),
-    ///         "filesystem".to_string(),
-    ///     ])
-    ///     .build();
-    /// ```
-    #[must_use]
-    pub fn disallowed_tools(mut self, tools: Vec<String>) -> Self {
-        self.config.disallowed_tools = Some(tools);
-        self
-    }
-
-    /// Set the maximum number of conversation turns
-    ///
-    /// Limits the conversation to the specified number of back-and-forth
-    /// exchanges. Useful for controlling conversation length.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use claude_sdk_rs_core::Config;
-    ///
-    /// let config = Config::builder()
-    ///     .max_turns(10)
-    ///     .build();
-    /// ```
-    #[must_use]
-    pub fn max_turns(mut self, turns: u32) -> Self {
-        self.config.max_turns = Some(turns);
-        self
-    }
-
-    /// Set whether to skip permission prompts
-    ///
-    /// When `true` (default), adds the `--dangerously-skip-permissions` flag
-    /// to bypass tool permission prompts. Set to `false` for additional security.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use claude_sdk_rs_core::Config;
-    ///
-    /// let config = Config::builder()
-    ///     .skip_permissions(false)  // Require permission prompts
-    ///     .build();
-    /// ```
-    #[must_use]
-    pub fn skip_permissions(mut self, skip: bool) -> Self {
-        self.config.skip_permissions = skip;
-        self
-    }
-
-    /// Set the security validation level
-    ///
-    /// Controls how strictly user input is validated for potential security threats.
-    /// - `Strict`: Blocks most special characters and patterns
-    /// - `Balanced`: Context-aware validation (default)
-    /// - `Relaxed`: Only blocks obvious attack patterns
-    /// - `Disabled`: No security validation (use with caution)
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use claude_sdk_rs_core::{Config, SecurityLevel};
-    ///
-    /// let config = Config::builder()
-    ///     .security_level(SecurityLevel::Relaxed)
-    ///     .build();
-    /// ```
-    #[must_use]
-    pub fn security_level(mut self, level: SecurityLevel) -> Self {
-        self.config.security_level = level;
-        self
-    }
-
     /// Build the final configuration
     ///
     /// Consumes the builder and returns the constructed `Config` instance.
@@ -865,21 +547,6 @@ impl ConfigBuilder {
 /// - Query contains malicious content
 /// - Query is empty
 pub fn validate_query(query: &str) -> Result<(), Error> {
-    validate_query_with_security_level(query, SecurityLevel::default())
-}
-
-/// Validate query input with specific security level
-///
-/// Checks that a query string meets all validation requirements including
-/// length limits and content validation based on the specified security level.
-///
-/// # Errors
-///
-/// Returns `Error::ConfigError` if:
-/// - Query exceeds maximum length
-/// - Query contains malicious content (based on security level)
-/// - Query is empty
-pub fn validate_query_with_security_level(query: &str, security_level: SecurityLevel) -> Result<(), Error> {
     if query.is_empty() {
         return Err(Error::InvalidInput("Query cannot be empty".to_string()));
     }
@@ -892,176 +559,55 @@ pub fn validate_query_with_security_level(query: &str, security_level: SecurityL
         )));
     }
 
-    match security_level {
-        SecurityLevel::Disabled => Ok(()),
-        SecurityLevel::Relaxed => {
-            if contains_obvious_malicious_patterns(query) {
-                return Err(Error::InvalidInput(
-                    "Query contains potentially malicious content".to_string(),
-                ));
-            }
-            Ok(())
-        }
-        SecurityLevel::Balanced => {
-            if contains_malicious_patterns(query) {
-                return Err(Error::InvalidInput(
-                    "Query contains potentially malicious content".to_string(),
-                ));
-            }
-            Ok(())
-        }
-        SecurityLevel::Strict => {
-            if contains_strict_malicious_patterns(query) {
-                return Err(Error::InvalidInput(
-                    "Query contains potentially malicious content".to_string(),
-                ));
-            }
-            Ok(())
-        }
+    if contains_malicious_patterns(query) {
+        return Err(Error::InvalidInput(
+            "Query contains potentially malicious content".to_string(),
+        ));
     }
+
+    Ok(())
 }
 
 /// Check if a string contains potentially malicious patterns
 fn contains_malicious_patterns(text: &str) -> bool {
-    // Early return for obviously safe patterns
-    if text.chars().all(|c| c.is_alphanumeric() || c.is_whitespace() || c == '-' || c == '_' || c == '.') {
-        return false;
-    }
-
-    let lower_text = text.to_lowercase();
-    
-    // Check for definite malicious patterns (keep these strict)
-    let strict_patterns = [
+    // Check for common injection patterns
+    let malicious_patterns = [
         // Script injection
         "<script",
         "javascript:",
         "onclick=",
         "onerror=",
+        // Command injection
+        "$(",
+        "${",
+        "`",
+        "&&",
+        "||",
+        ";",
+        "|",
+        ">",
+        "<",
         // Path traversal
         "../",
         "..\\",
-        // SQL injection with context
-        "' or '",
-        "\" or \"",
-        "'; drop",
-        "\"; drop",
-        "' or 1=1",
-        "\" or 1=1",
+        // SQL injection indicators (basic)
+        "' OR ",
+        "\" OR ",
+        "'; DROP",
         // Null bytes
         "\0",
     ];
-    
-    if strict_patterns.iter().any(|pattern| lower_text.contains(pattern)) {
-        return true;
-    }
-    
-    // For command injection patterns, use more context-aware checks
-    // Check if multiple suspicious patterns appear together
-    let command_indicators = [
-        ("$(", ")"),
-        ("${", "}"),
-        ("&&", ""),
-        ("||", ""),
-        (";", ""),
-        ("|", ""),
-    ];
-    
-    let mut suspicious_count = 0;
-    for (start, _) in &command_indicators {
-        if text.contains(start) {
-            suspicious_count += 1;
-        }
-    }
-    
-    // Flag if multiple command injection patterns are present
-    // or if && or || appear (common command chaining)
-    // or if $( or ${ appear (command substitution)
-    // or if ; followed by dangerous commands
-    if suspicious_count >= 2 || text.contains("&&") || text.contains("||") 
-       || text.contains("$(") || text.contains("${") {
-        return true;
-    }
-    
-    // Check for semicolon or pipe followed by dangerous commands
-    if text.contains(';') || text.contains('|') {
-        let dangerous_commands = ["rm", "del", "format", "fdisk", "chmod", "chown", "malicious_command"];
-        for cmd in &dangerous_commands {
-            if text.contains(&format!("; {}", cmd)) || text.contains(&format!(";{}", cmd)) ||
-               text.contains(&format!("| {}", cmd)) || text.contains(&format!("|{}", cmd)) {
-                return true;
-            }
-        }
-    }
-    
-    // Check for backticks only if they appear to be command substitution
-    if text.contains('`') {
-        // Allow single backticks for markdown code formatting
-        let backtick_count = text.matches('`').count();
-        if backtick_count >= 2 || text.contains("``") {
-            // Check if it looks like command substitution
-            if text.contains("`$") || text.contains("`;") || text.contains("`|") {
-                return true;
-            }
-        }
-    }
-    
-    // Check for redirection only in suspicious contexts
-    if (text.contains('>') || text.contains('<')) && 
-       (text.contains("2>") || text.contains("&>") || text.contains("1>") || 
-        text.contains("<(") || text.contains(">(")) {
-        return true;
-    }
-    
-    false
+
+    let lower_text = text.to_lowercase();
+    malicious_patterns
+        .iter()
+        .any(|pattern| lower_text.contains(pattern))
 }
 
-/// Check for only the most obvious malicious patterns (relaxed mode)
-fn contains_obvious_malicious_patterns(text: &str) -> bool {
-    let lower_text = text.to_lowercase();
-    
-    // Only check for very obvious attack patterns
-    let obvious_patterns = [
-        // Script injection
-        "<script",
-        "javascript:",
-        // Path traversal
-        "../",
-        "..\\",
-        // SQL injection with clear intent
-        "'; drop table",
-        "\"; drop table",
-        "' or 1=1--",
-        "\" or 1=1--",
-        // Null bytes
-        "\0",
-    ];
-    
-    obvious_patterns.iter().any(|pattern| lower_text.contains(pattern))
-}
-
-/// Check using strict patterns (strict mode) 
-fn contains_strict_malicious_patterns(text: &str) -> bool {
-    // Block if text contains any special characters commonly used in attacks
-    let has_special_chars = text.chars().any(|c| matches!(c, 
-        '`' | '$' | '{' | '}' | '(' | ')' | '[' | ']' | 
-        ';' | '|' | '&' | '<' | '>' | '"' | '\'' | '\\' | 
-        '\n' | '\r' | '\t' | '\0'
-    ));
-    
-    if has_special_chars {
-        return true;
-    }
-    
-    // Also check for encoded patterns
-    let lower_text = text.to_lowercase();
-    let encoded_patterns = [
-        "%3c", // <
-        "%3e", // >
-        "%22", // "
-        "%27", // '
-        "%2e%2e", // ..
-        "%00", // null byte
-    ];
-    
-    encoded_patterns.iter().any(|pattern| lower_text.contains(pattern))
+/// Check if a tool name has valid format
+fn is_valid_tool_name(name: &str) -> bool {
+    // Tool names should only contain alphanumeric, underscores, hyphens, and double underscores
+    // Format examples: "bash", "filesystem", "mcp__server__tool"
+    name.chars()
+        .all(|c| c.is_alphanumeric() || c == '_' || c == '-' || c == ':')
 }

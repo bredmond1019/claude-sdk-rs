@@ -110,7 +110,7 @@ mod config_builder_tests {
 
     #[test]
     fn test_builder_with_tools() {
-        let tools = vec!["mcp__server__search".to_string(), "bash:ls".to_string()];
+        let tools = vec!["mcp__server__search".to_string(), "bash".to_string()];
         let config = Config::builder()
             .allowed_tools(tools.clone())
             .build()
@@ -136,7 +136,7 @@ mod config_builder_tests {
 
     #[test]
     fn test_builder_chaining_all_options() {
-        let tools = vec!["mcp__server__tool1".to_string(), "bash:ls".to_string()];
+        let tools = vec!["tool1".to_string(), "tool2".to_string()];
         let mcp_path = PathBuf::from("/test/mcp.json");
 
         let config = Config::builder()
@@ -318,7 +318,7 @@ mod tool_configuration_tests {
         let tools = vec![
             "mcp__server__search".to_string(),
             "mcp__server__filesystem".to_string(),
-            "bash:ls".to_string(),
+            "bash".to_string(),
         ];
         let config = Config::builder()
             .allowed_tools(tools.clone())
@@ -331,8 +331,8 @@ mod tool_configuration_tests {
     #[test]
     fn test_duplicate_tools() {
         let tools = vec![
-            "bash:ls".to_string(),
-            "bash:ls".to_string(), // Duplicate
+            "bash".to_string(),
+            "bash".to_string(), // Duplicate
             "mcp__server__search".to_string(),
         ];
         let config = Config::builder()
@@ -347,11 +347,11 @@ mod tool_configuration_tests {
     #[test]
     fn test_tool_name_patterns() {
         let tools = vec![
-            "bash:ls".to_string(),                     // Simple bash command
-            "mcp__server__filesystem".to_string(),     // MCP pattern
-            "mcp__custom-tool__name".to_string(),      // Hyphenated MCP
-            "mcp__tool_with__underscores".to_string(), // Underscored MCP
-            "mcp__numeric123__tool".to_string(),       // With numbers
+            "bash".to_string(),                    // Simple name
+            "mcp__server__filesystem".to_string(), // MCP pattern
+            "custom-tool-name".to_string(),        // Hyphenated
+            "tool_with_underscores".to_string(),   // Underscored
+            "numeric123".to_string(),              // With numbers (but not starting with)
         ];
         let config = Config::builder()
             .allowed_tools(tools.clone())
@@ -374,7 +374,7 @@ mod config_cloning_tests {
             .system_prompt("Test prompt")
             .stream_format(StreamFormat::Json)
             .timeout_secs(60)
-            .allowed_tools(vec!["Bash(echo)".to_string()])
+            .allowed_tools(vec!["tool1".to_string()])
             .build()
             .unwrap();
 
@@ -417,7 +417,6 @@ mod config_cloning_tests {
 #[cfg(test)]
 mod config_edge_cases {
     use super::*;
-    use crate::core::{SecurityLevel, validate_query_with_security_level};
 
     #[test]
     fn test_config_with_none_values() {
@@ -431,13 +430,6 @@ mod config_edge_cases {
             non_interactive: true,
             verbose: false,
             max_tokens: None,
-            continue_session: false,
-            resume_session_id: None,
-            append_system_prompt: None,
-            disallowed_tools: None,
-            max_turns: None,
-            skip_permissions: true,
-            security_level: SecurityLevel::default(),
         };
 
         assert_eq!(config.model, None);
@@ -487,54 +479,6 @@ mod config_edge_cases {
 
         assert!(!config2.verbose);
         assert!(config2.non_interactive);
-    }
-
-    #[test]
-    fn test_security_levels() {
-        // Test queries
-        let safe_query = "What is the capital of France?";
-        let markdown_query = "How do I use `backticks` in markdown?";
-        let command_query = "Run ls -la && pwd";
-        let script_query = "<script>alert('test')</script>";
-        
-        // Strict mode - blocks most special characters
-        assert!(validate_query_with_security_level(safe_query, SecurityLevel::Strict).is_ok());
-        assert!(validate_query_with_security_level(markdown_query, SecurityLevel::Strict).is_err());
-        assert!(validate_query_with_security_level(command_query, SecurityLevel::Strict).is_err());
-        assert!(validate_query_with_security_level(script_query, SecurityLevel::Strict).is_err());
-        
-        // Balanced mode - context-aware
-        assert!(validate_query_with_security_level(safe_query, SecurityLevel::Balanced).is_ok());
-        assert!(validate_query_with_security_level(markdown_query, SecurityLevel::Balanced).is_ok());
-        assert!(validate_query_with_security_level(command_query, SecurityLevel::Balanced).is_err());
-        assert!(validate_query_with_security_level(script_query, SecurityLevel::Balanced).is_err());
-        
-        // Relaxed mode - only obvious attacks
-        assert!(validate_query_with_security_level(safe_query, SecurityLevel::Relaxed).is_ok());
-        assert!(validate_query_with_security_level(markdown_query, SecurityLevel::Relaxed).is_ok());
-        assert!(validate_query_with_security_level(command_query, SecurityLevel::Relaxed).is_ok());
-        assert!(validate_query_with_security_level(script_query, SecurityLevel::Relaxed).is_err());
-        
-        // Disabled mode - allows everything
-        assert!(validate_query_with_security_level(safe_query, SecurityLevel::Disabled).is_ok());
-        assert!(validate_query_with_security_level(markdown_query, SecurityLevel::Disabled).is_ok());
-        assert!(validate_query_with_security_level(command_query, SecurityLevel::Disabled).is_ok());
-        assert!(validate_query_with_security_level(script_query, SecurityLevel::Disabled).is_ok());
-    }
-
-    #[test]
-    fn test_balanced_mode_specific_cases() {
-        // Test that "create project-design-doc.md" now passes in balanced mode
-        assert!(validate_query_with_security_level("create project-design-doc.md", SecurityLevel::Balanced).is_ok());
-        
-        // Test other legitimate queries
-        assert!(validate_query_with_security_level("The price is $100", SecurityLevel::Balanced).is_ok());
-        assert!(validate_query_with_security_level("Email: user@example.com", SecurityLevel::Balanced).is_ok());
-        assert!(validate_query_with_security_level("git commit -m 'Initial commit'", SecurityLevel::Balanced).is_ok());
-        
-        // Test that actual malicious patterns still fail
-        assert!(validate_query_with_security_level("$(rm -rf /)", SecurityLevel::Balanced).is_err());
-        assert!(validate_query_with_security_level("'; DROP TABLE users;--", SecurityLevel::Balanced).is_err());
     }
 }
 
@@ -745,10 +689,7 @@ mod validation_tests {
             .system_prompt("You are a helpful assistant")
             .timeout_secs(60)
             .max_tokens(1000)
-            .allowed_tools(vec![
-                "Bash(ls)".to_string(),
-                "mcp__server__tool".to_string(),
-            ])
+            .allowed_tools(vec!["bash".to_string(), "mcp__server__tool".to_string()])
             .build()
             .unwrap();
 
@@ -841,11 +782,11 @@ mod validation_tests {
 
         // Valid tool names
         let valid_tools = vec![
-            vec!["bash:ls".to_string()],
+            vec!["bash".to_string()],
             vec!["mcp__server__tool".to_string()],
-            vec!["mcp__tool-name__action".to_string()],
-            vec!["mcp__tool_name__function".to_string()],
-            vec!["Bash(command)".to_string()],
+            vec!["tool-name".to_string()],
+            vec!["tool_name".to_string()],
+            vec!["tool:command".to_string()],
         ];
 
         for tools in valid_tools {
@@ -909,7 +850,7 @@ mod validation_tests {
             .system_prompt("Safe prompt")
             .timeout_secs(30)
             .max_tokens(1000)
-            .allowed_tools(vec!["Bash(ls)".to_string()])
+            .allowed_tools(vec!["bash".to_string()])
             .mcp_config(std::path::PathBuf::from("/path/to/config"))
             .build()
             .unwrap();
@@ -935,517 +876,5 @@ mod validation_tests {
             assert!(error_msg.contains("3600")); // Shows max
             assert!(error_msg.contains("5000")); // Shows actual
         }
-    }
-}
-
-/// Test new configuration fields and functionality
-#[cfg(test)]
-mod new_config_fields_tests {
-    use super::*;
-
-    #[test]
-    fn test_default_new_fields() {
-        let config = Config::default();
-
-        assert!(!config.continue_session);
-        assert_eq!(config.resume_session_id, None);
-        assert_eq!(config.append_system_prompt, None);
-        assert_eq!(config.disallowed_tools, None);
-        assert_eq!(config.max_turns, None);
-        assert!(config.skip_permissions); // Default true
-    }
-
-    #[test]
-    fn test_continue_session_builder() {
-        let config = Config::builder().continue_session().build().unwrap();
-
-        assert!(config.continue_session);
-    }
-
-    #[test]
-    fn test_resume_session_builder() {
-        let session_id = "session_123".to_string();
-        let config = Config::builder()
-            .resume_session(session_id.clone())
-            .build()
-            .unwrap();
-
-        assert_eq!(config.resume_session_id, Some(session_id));
-    }
-
-    #[test]
-    fn test_append_system_prompt_builder() {
-        let append_prompt = "Additionally, be concise.";
-        let config = Config::builder()
-            .append_system_prompt(append_prompt)
-            .build()
-            .unwrap();
-
-        assert_eq!(config.append_system_prompt, Some(append_prompt.to_string()));
-    }
-
-    #[test]
-    fn test_disallowed_tools_builder() {
-        let tools = vec!["bash:rm".to_string(), "mcp__filesystem__delete".to_string()];
-        let config = Config::builder()
-            .disallowed_tools(tools.clone())
-            .build()
-            .unwrap();
-
-        assert_eq!(config.disallowed_tools, Some(tools));
-    }
-
-    #[test]
-    fn test_max_turns_builder() {
-        let config = Config::builder().max_turns(10).build().unwrap();
-
-        assert_eq!(config.max_turns, Some(10));
-    }
-
-    #[test]
-    fn test_skip_permissions_builder() {
-        let config1 = Config::builder().skip_permissions(false).build().unwrap();
-
-        assert!(!config1.skip_permissions);
-
-        let config2 = Config::builder().skip_permissions(true).build().unwrap();
-
-        assert!(config2.skip_permissions);
-    }
-
-    #[test]
-    fn test_all_new_fields_together() {
-        let tools = vec!["bash:rm".to_string()];
-        let config = Config::builder()
-            .continue_session()
-            .resume_session("session_abc".to_string())
-            .append_system_prompt("Be helpful")
-            .disallowed_tools(tools.clone())
-            .max_turns(5)
-            .skip_permissions(false)
-            .build()
-            .unwrap();
-
-        assert!(config.continue_session);
-        assert_eq!(config.resume_session_id, Some("session_abc".to_string()));
-        assert_eq!(config.append_system_prompt, Some("Be helpful".to_string()));
-        assert_eq!(config.disallowed_tools, Some(tools));
-        assert_eq!(config.max_turns, Some(5));
-        assert!(!config.skip_permissions);
-    }
-}
-
-/// Test validation for new configuration fields
-#[cfg(test)]
-mod new_config_validation_tests {
-    use super::*;
-
-    #[test]
-    fn test_max_turns_validation() {
-        // Zero max_turns should fail
-        let result = Config::builder().max_turns(0).build();
-        assert!(result.is_err());
-        if let Err(e) = result {
-            assert!(e.to_string().contains("Max turns must be greater than 0"));
-        }
-
-        // Valid max_turns should pass
-        for turns in [1, 5, 10, 100] {
-            let result = Config::builder().max_turns(turns).build();
-            assert!(result.is_ok());
-        }
-    }
-
-    #[test]
-    fn test_tools_conflict_validation() {
-        // Same tool in both allowed and disallowed should fail
-        let result = Config::builder()
-            .allowed_tools(vec!["Bash(ls)".to_string()])
-            .disallowed_tools(vec!["Bash(ls)".to_string()])
-            .build();
-
-        assert!(result.is_err());
-        if let Err(e) = result {
-            assert!(e
-                .to_string()
-                .contains("cannot be both allowed and disallowed"));
-        }
-
-        // Different tools should pass
-        let result = Config::builder()
-            .allowed_tools(vec!["Bash(ls)".to_string()])
-            .disallowed_tools(vec!["mcp__filesystem__delete".to_string()])
-            .build();
-
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_system_prompt_conflict_validation() {
-        // Both system_prompt and append_system_prompt should fail
-        let result = Config::builder()
-            .system_prompt("Main prompt")
-            .append_system_prompt("Additional prompt")
-            .build();
-
-        assert!(result.is_err());
-        if let Err(e) = result {
-            assert!(e
-                .to_string()
-                .contains("Cannot use both system_prompt and append_system_prompt"));
-        }
-
-        // Only one should pass
-        let result1 = Config::builder().system_prompt("Main prompt").build();
-        assert!(result1.is_ok());
-
-        let result2 = Config::builder()
-            .append_system_prompt("Additional prompt")
-            .build();
-        assert!(result2.is_ok());
-    }
-
-    #[test]
-    fn test_append_system_prompt_validation() {
-        // Too long append_system_prompt should fail
-        let long_prompt = "a".repeat(10_001);
-        let result = Config::builder().append_system_prompt(long_prompt).build();
-        assert!(result.is_err());
-        if let Err(e) = result {
-            assert!(e
-                .to_string()
-                .contains("Append system prompt exceeds maximum length"));
-        }
-
-        // Malicious append_system_prompt should fail
-        let malicious_prompt = "<script>alert('xss')</script>";
-        let result = Config::builder()
-            .append_system_prompt(malicious_prompt)
-            .build();
-        assert!(result.is_err());
-        if let Err(e) = result {
-            assert!(e.to_string().contains("malicious content"));
-        }
-
-        // Valid append_system_prompt should pass
-        let result = Config::builder()
-            .append_system_prompt("Be concise and helpful")
-            .build();
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_disallowed_tools_validation() {
-        // Empty tool name should fail
-        let result = Config::builder()
-            .disallowed_tools(vec!["".to_string()])
-            .build();
-        assert!(result.is_err());
-
-        // Too long tool name should fail
-        let long_tool = "a".repeat(101);
-        let result = Config::builder().disallowed_tools(vec![long_tool]).build();
-        assert!(result.is_err());
-
-        // Invalid characters should fail
-        let invalid_tools = vec![
-            "tool with spaces".to_string(),
-            "tool@#$".to_string(),
-            "tool;command".to_string(),
-        ];
-        for tool in invalid_tools {
-            let result = Config::builder().disallowed_tools(vec![tool]).build();
-            assert!(result.is_err());
-        }
-
-        // Valid tool names should pass
-        let valid_tools = vec![
-            "bash:rm".to_string(),
-            "mcp__server__tool".to_string(),
-            "mcp__tool-name__action".to_string(),
-            "mcp__tool_name__function".to_string(),
-            "Bash(command)".to_string(),
-        ];
-        let result = Config::builder().disallowed_tools(valid_tools).build();
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_session_id_validation() {
-        // Empty session ID should fail
-        let result = Config::builder().resume_session("".to_string()).build();
-        assert!(result.is_err());
-        if let Err(e) = result {
-            assert!(e.to_string().contains("Resume session ID cannot be empty"));
-        }
-
-        // Too long session ID should fail
-        let long_id = "a".repeat(101);
-        let result = Config::builder().resume_session(long_id).build();
-        assert!(result.is_err());
-        if let Err(e) = result {
-            assert!(e.to_string().contains("exceeds maximum length"));
-        }
-
-        // Invalid characters should fail
-        let invalid_ids = vec![
-            "session with spaces".to_string(),
-            "session@#$".to_string(),
-            "session;command".to_string(),
-        ];
-        for id in invalid_ids {
-            let result = Config::builder().resume_session(id).build();
-            assert!(result.is_err());
-            if let Err(e) = result {
-                assert!(e.to_string().contains("invalid characters"));
-            }
-        }
-
-        // Valid session IDs should pass
-        let valid_ids = vec![
-            "session123".to_string(),
-            "session_abc".to_string(),
-            "session-def".to_string(),
-            "abc123_def-456".to_string(),
-        ];
-        for id in valid_ids {
-            let result = Config::builder().resume_session(id).build();
-            assert!(result.is_ok());
-        }
-    }
-
-    #[test]
-    fn test_edge_cases_new_fields() {
-        // Unicode in append_system_prompt
-        let unicode_prompt = "Be helpful 🤖 and respond in 日本語 if needed.";
-        let result = Config::builder()
-            .append_system_prompt(unicode_prompt)
-            .build();
-        assert!(result.is_ok());
-
-        // Maximum valid values
-        let result = Config::builder().max_turns(u32::MAX).build();
-        assert!(result.is_ok());
-
-        // Multiple disallowed tools
-        let many_tools: Vec<String> = (0..100)
-            .map(|i| format!("mcp__server__tool_{}", i))
-            .collect();
-        let result = Config::builder().disallowed_tools(many_tools).build();
-        assert!(result.is_ok());
-
-        // Empty disallowed tools list
-        let result = Config::builder().disallowed_tools(vec![]).build();
-        assert!(result.is_ok());
-    }
-}
-
-/// Test granular tool permission parsing and validation
-#[cfg(test)]
-mod granular_permission_tests {
-    use super::*;
-    use crate::core::types::ToolPermission;
-    use std::str::FromStr;
-
-    #[test]
-    fn test_config_validation_with_granular_bash_permissions() {
-        // Test valid Bash permissions
-        let valid_bash_permissions = vec![
-            "Bash(ls)".to_string(),
-            "Bash(git status)".to_string(),
-            "Bash(npm install)".to_string(),
-            "bash:ls".to_string(), // legacy format
-            "bash:git status".to_string(),
-        ];
-
-        for permission in valid_bash_permissions {
-            let config = Config {
-                allowed_tools: Some(vec![permission.clone()]),
-                ..Config::default()
-            };
-            assert!(
-                config.validate().is_ok(),
-                "Valid bash permission '{}' should pass validation",
-                permission
-            );
-        }
-    }
-
-    #[test]
-    fn test_config_validation_with_granular_mcp_permissions() {
-        // Test valid MCP permissions
-        let valid_mcp_permissions = vec![
-            "mcp__database__query".to_string(),
-            "mcp__filesystem__read".to_string(),
-            "mcp__server__*".to_string(),
-        ];
-
-        for permission in valid_mcp_permissions {
-            let config = Config {
-                allowed_tools: Some(vec![permission.clone()]),
-                ..Config::default()
-            };
-            assert!(
-                config.validate().is_ok(),
-                "Valid MCP permission '{}' should pass validation",
-                permission
-            );
-        }
-    }
-
-    #[test]
-    fn test_config_validation_with_invalid_granular_permissions() {
-        // Test invalid permission formats
-        let invalid_permissions = vec![
-            "Bash()".to_string(),         // Empty command
-            "bash:".to_string(),          // Empty legacy command
-            "mcp__".to_string(),          // Incomplete MCP
-            "mcp__server".to_string(),    // Missing tool
-            "mcp__server__".to_string(),  // Empty tool
-            "Shell(ls)".to_string(),      // Wrong tool name
-            "unknown_format".to_string(), // Unknown format
-            "".to_string(),               // Empty string
-        ];
-
-        for permission in invalid_permissions {
-            let config = Config {
-                allowed_tools: Some(vec![permission.clone()]),
-                ..Config::default()
-            };
-            assert!(
-                config.validate().is_err(),
-                "Invalid permission '{}' should fail validation",
-                permission
-            );
-        }
-    }
-
-    #[test]
-    fn test_config_validation_with_disallowed_granular_permissions() {
-        // Test that disallowed tools also get validated
-        let config = Config {
-            disallowed_tools: Some(vec![
-                "Bash(rm)".to_string(),
-                "mcp__dangerous__delete".to_string(),
-            ]),
-            ..Config::default()
-        };
-        match config.validate() {
-            Ok(_) => {}
-            Err(e) => panic!("Expected config validation to pass but got error: {}", e),
-        }
-
-        // Test invalid disallowed tools
-        let invalid_config = Config {
-            disallowed_tools: Some(vec![
-                "Bash()".to_string(), // Empty command
-            ]),
-            ..Config::default()
-        };
-        assert!(invalid_config.validate().is_err());
-    }
-
-    #[test]
-    fn test_config_validation_granular_permission_conflicts() {
-        // Test that conflicts are detected with granular permissions
-        let config = Config {
-            allowed_tools: Some(vec!["Bash(ls)".to_string()]),
-            disallowed_tools: Some(vec!["Bash(ls)".to_string()]), // Same tool
-            ..Config::default()
-        };
-        assert!(
-            config.validate().is_err(),
-            "Conflicting granular permissions should be detected"
-        );
-    }
-
-    #[test]
-    fn test_config_validation_mixed_permission_formats() {
-        // Test that mixed formats work together
-        let config = Config {
-            allowed_tools: Some(vec![
-                "Bash(ls)".to_string(),
-                "bash:pwd".to_string(),
-                "mcp__database__query".to_string(),
-                "*".to_string(),
-            ]),
-            disallowed_tools: Some(vec![
-                "Bash(rm)".to_string(),
-                "mcp__dangerous__*".to_string(),
-            ]),
-            ..Config::default()
-        };
-        assert!(
-            config.validate().is_ok(),
-            "Mixed permission formats should work together"
-        );
-    }
-
-    #[test]
-    fn test_tool_permission_parsing_integration() {
-        // Test that all formats can be parsed correctly
-        let permission_tests = vec![
-            ("Bash(ls)", ToolPermission::bash("ls")),
-            ("bash:pwd", ToolPermission::bash("pwd")),
-            ("mcp__db__query", ToolPermission::mcp("db", "query")),
-            ("*", ToolPermission::All),
-        ];
-
-        for (permission_str, expected) in permission_tests {
-            let parsed = ToolPermission::from_str(permission_str).unwrap();
-            assert_eq!(
-                parsed, expected,
-                "Permission '{}' should parse to {:?}",
-                permission_str, expected
-            );
-
-            // Test that parsed permissions convert to proper CLI format
-            let cli_format = parsed.to_cli_format();
-            println!(
-                "Permission '{}' -> Parsed: {:?} -> CLI: '{}'",
-                permission_str, parsed, cli_format
-            );
-        }
-    }
-
-    #[test]
-    fn test_granular_permission_builder_integration() {
-        // Test that ConfigBuilder handles granular permissions correctly
-        let config = Config::builder()
-            .allowed_tools(vec![
-                "Bash(ls)".to_string(),
-                "bash:pwd".to_string(),
-                "mcp__database__query".to_string(),
-            ])
-            .disallowed_tools(vec![
-                "Bash(rm)".to_string(),
-                "mcp__dangerous__delete".to_string(),
-            ])
-            .build();
-
-        assert!(
-            config.is_ok(),
-            "ConfigBuilder should handle granular permissions correctly"
-        );
-
-        let config = config.unwrap();
-        assert_eq!(config.allowed_tools.as_ref().unwrap().len(), 3);
-        assert_eq!(config.disallowed_tools.as_ref().unwrap().len(), 2);
-    }
-
-    #[test]
-    fn test_granular_permission_length_validation() {
-        // Test that very long permission strings are rejected
-        let long_command = "a".repeat(300); // Exceeds MAX_TOOL_NAME_LENGTH
-        let long_permission = format!("Bash({})", long_command);
-
-        let config = Config {
-            allowed_tools: Some(vec![long_permission]),
-            ..Config::default()
-        };
-        assert!(
-            config.validate().is_err(),
-            "Overly long permission strings should be rejected"
-        );
     }
 }

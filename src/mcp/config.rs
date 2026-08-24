@@ -90,17 +90,15 @@ impl MCPConfig {
                 "true",
                 true,
             ),
-            load_balancing_strategy:
-                crate::mcp::connection_pool::LoadBalancingStrategy::HealthBased,
-            circuit_breaker:
-                crate::mcp::core::error::circuit_breaker::CircuitBreakerConfig::default(),
-            health_monitoring: crate::mcp::health::HealthConfig::default(),
+            load_balancing_strategy: crate::connection_pool::LoadBalancingStrategy::HealthBased,
+            circuit_breaker: crate::core::error::circuit_breaker::CircuitBreakerConfig::default(),
+            health_monitoring: crate::health::HealthConfig::default(),
             enable_auto_reconnect: Self::get_env_var_or_default(
                 "MCP_ENABLE_AUTO_RECONNECT",
                 "true",
                 true,
             ),
-            backoff_config: crate::mcp::connection_pool::BackoffConfig::default(),
+            backoff_config: crate::connection_pool::BackoffConfig::default(),
         }
     }
 

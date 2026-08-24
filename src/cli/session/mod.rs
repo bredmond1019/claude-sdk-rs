@@ -174,7 +174,7 @@ impl SessionManager {
             session.last_accessed = Utc::now();
             // Create a clone to avoid borrow checker issues
             let session_to_save = session.clone();
-            let _ = session; // Explicitly drop the mutable borrow
+            drop(session); // Explicitly drop the mutable borrow
             self.save_session(&session_to_save)?;
         }
         Ok(())

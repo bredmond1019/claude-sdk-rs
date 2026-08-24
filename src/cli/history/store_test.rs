@@ -260,7 +260,10 @@ impl HistoryTestFixture {
                 let mut entry = HistoryEntry::new(
                     session_id,
                     format!("session_{}_cmd_{}", session_idx, cmd_idx),
-                    vec![format!("--session-{}", session_idx), format!("--cmd-{}", cmd_idx)],
+                    vec![
+                        format!("--session-{}", session_idx),
+                        format!("--cmd-{}", cmd_idx),
+                    ],
                     format!(
                         "Session {} command {}: Processing completed",
                         session_idx, cmd_idx
@@ -407,7 +410,10 @@ pub mod test_helpers {
             HistoryEntry::new(
                 session_id,
                 "cmd-with_special.chars@test!".to_string(),
-                vec!["--path=/tmp/test$file&name".to_string(), "--regex=\\d+\\s*".to_string()],
+                vec![
+                    "--path=/tmp/test$file&name".to_string(),
+                    "--regex=\\d+\\s*".to_string(),
+                ],
                 "Output with special chars: <>\"'&\nNew line\tTab\r\nWindows line ending"
                     .to_string(),
                 true,

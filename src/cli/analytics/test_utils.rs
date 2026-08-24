@@ -31,8 +31,11 @@ pub mod patterns {
     ];
 
     /// Model patterns with relative costs
-    pub const MODELS: &[(&str, f64)] =
-        &[("claude-3-opus", 1.0), ("claude-3-sonnet", 0.2), ("claude-3-haiku", 0.05)];
+    pub const MODELS: &[(&str, f64)] = &[
+        ("claude-3-opus", 1.0),
+        ("claude-3-sonnet", 0.2),
+        ("claude-3-haiku", 0.05),
+    ];
 
     /// Time-based activity patterns (hour -> relative activity level)
     pub const HOURLY_ACTIVITY: &[(u32, f64)] = &[

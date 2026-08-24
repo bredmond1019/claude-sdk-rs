@@ -267,7 +267,11 @@ mod data_aggregation_tests {
         let fixture = DashboardTestFixture::new().await?;
 
         // Create data across multiple sessions
-        let sessions = vec![uuid::Uuid::new_v4(), uuid::Uuid::new_v4(), uuid::Uuid::new_v4()];
+        let sessions = vec![
+            uuid::Uuid::new_v4(),
+            uuid::Uuid::new_v4(),
+            uuid::Uuid::new_v4(),
+        ];
 
         let mut cost_tracker = fixture.cost_tracker.write().await;
         let mut history_store = fixture.history_store.write().await;
@@ -514,8 +518,13 @@ mod kpi_calculation_tests {
         let session_id = uuid::Uuid::new_v4();
 
         // Add mix of successful and failed commands
-        let commands =
-            vec![("cmd1", true), ("cmd2", true), ("cmd3", false), ("cmd4", true), ("cmd5", false)];
+        let commands = vec![
+            ("cmd1", true),
+            ("cmd2", true),
+            ("cmd3", false),
+            ("cmd4", true),
+            ("cmd5", false),
+        ];
 
         let mut history_store = fixture.history_store.write().await;
         for (cmd, success) in commands {

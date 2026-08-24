@@ -284,7 +284,11 @@ mod user_friendly_message_tests {
             ),
             (
                 InteractiveError::SessionNotFound("work-session-123".to_string()),
-                vec!["work-session-123", "not found", "claude-interactive session list"],
+                vec![
+                    "work-session-123",
+                    "not found",
+                    "claude-interactive session list",
+                ],
             ),
             (
                 InteractiveError::PermissionDenied("Cannot access API".to_string()),

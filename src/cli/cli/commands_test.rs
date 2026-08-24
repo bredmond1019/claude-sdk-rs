@@ -370,7 +370,11 @@ mod run_command_parsing_tests {
     fn test_run_command_all_options() {
         let cmd = RunCommand {
             command: "test".to_string(),
-            args: vec!["--verbose".to_string(), "--output".to_string(), "result.txt".to_string()],
+            args: vec![
+                "--verbose".to_string(),
+                "--output".to_string(),
+                "result.txt".to_string(),
+            ],
             session: Some("dev-session".to_string()),
             parallel: true,
             agents: 8,

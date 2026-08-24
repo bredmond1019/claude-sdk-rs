@@ -19,33 +19,28 @@ pub async fn execute_claude(config: &Config, query: &str) -> Result<String> {
             config.timeout_secs.unwrap_or(30).to_string(),
         );
 
-    // Check for custom claude binary path first (for nvm compatibility)
-    let claude_binary = if let Ok(custom_path) = std::env::var("CLAUDE_BINARY") {
-        std::path::PathBuf::from(custom_path)
-    } else {
-        which::which("claude").map_err(|e| {
-            let enhanced_context = context
-                .clone()
-                .with_error_chain(format!("Binary search failed: {}", e))
-                .with_debug_info("search_error", e.to_string());
-            let error = Error::BinaryNotFound;
-            log_error_with_context(&error, &enhanced_context);
+    let claude_binary = which::which("claude").map_err(|e| {
+        let enhanced_context = context
+            .clone()
+            .with_error_chain(format!("Binary search failed: {}", e))
+            .with_debug_info("search_error", e.to_string());
+        let error = Error::BinaryNotFound;
+        log_error_with_context(&error, &enhanced_context);
 
-            // Record to telemetry
-            let mut telemetry_context = HashMap::new();
-            telemetry_context.insert("search_error".to_string(), e.to_string());
-            telemetry_context.insert(
-                "path_env".to_string(),
-                std::env::var("PATH").unwrap_or_default(),
-            );
-            let error_clone = error.clone();
-            tokio::spawn(async move {
-                telemetry::record_error(&error_clone, "execute_claude", telemetry_context).await;
-            });
+        // Record to telemetry
+        let mut telemetry_context = HashMap::new();
+        telemetry_context.insert("search_error".to_string(), e.to_string());
+        telemetry_context.insert(
+            "path_env".to_string(),
+            std::env::var("PATH").unwrap_or_default(),
+        );
+        let error_clone = error.clone();
+        tokio::spawn(async move {
+            telemetry::record_error(&error_clone, "execute_claude", telemetry_context).await;
+        });
 
-            error
-        })?
-    };
+        error
+    })?;
 
     let mut cmd = Command::new(claude_binary);
 
@@ -94,38 +89,6 @@ pub async fn execute_claude(config: &Config, query: &str) -> Result<String> {
 
     if let Some(max_tokens) = &config.max_tokens {
         cmd.arg("--max-tokens").arg(max_tokens.to_string());
-    }
-
-    // Add session management flags
-    if config.continue_session {
-        cmd.arg("--continue");
-    }
-
-    if let Some(session_id) = &config.resume_session_id {
-        cmd.arg("--resume").arg(session_id);
-    }
-
-    // Add disallowed tools flags
-    if let Some(disallowed_tools) = &config.disallowed_tools {
-        for tool in disallowed_tools {
-            cmd.arg("--disallowedTools").arg(tool);
-        }
-        debug!("Added {} disallowed tools", disallowed_tools.len());
-    }
-
-    // Add default skip permissions flag (enabled by default)
-    if config.skip_permissions {
-        cmd.arg("--dangerously-skip-permissions");
-    }
-
-    // Add append system prompt flag
-    if let Some(append_prompt) = &config.append_system_prompt {
-        cmd.arg("--append-system-prompt").arg(append_prompt);
-    }
-
-    // Add max turns flag
-    if let Some(max_turns) = &config.max_turns {
-        cmd.arg("--max-turns").arg(max_turns.to_string());
     }
 
     // Determine if we should use stdin or command argument
@@ -331,12 +294,7 @@ pub async fn execute_claude_streaming(
     config: &Config,
     query: &str,
 ) -> Result<mpsc::Receiver<Result<String>>> {
-    // Check for custom claude binary path first (for nvm compatibility)
-    let claude_binary = if let Ok(custom_path) = std::env::var("CLAUDE_BINARY") {
-        std::path::PathBuf::from(custom_path)
-    } else {
-        which::which("claude").map_err(|_| Error::BinaryNotFound)?
-    };
+    let claude_binary = which::which("claude").map_err(|_| Error::BinaryNotFound)?;
 
     let mut cmd = Command::new(claude_binary);
 
@@ -385,38 +343,6 @@ pub async fn execute_claude_streaming(
 
     if let Some(max_tokens) = &config.max_tokens {
         cmd.arg("--max-tokens").arg(max_tokens.to_string());
-    }
-
-    // Add session management flags
-    if config.continue_session {
-        cmd.arg("--continue");
-    }
-
-    if let Some(session_id) = &config.resume_session_id {
-        cmd.arg("--resume").arg(session_id);
-    }
-
-    // Add disallowed tools flags
-    if let Some(disallowed_tools) = &config.disallowed_tools {
-        for tool in disallowed_tools {
-            cmd.arg("--disallowedTools").arg(tool);
-        }
-        debug!("Added {} disallowed tools", disallowed_tools.len());
-    }
-
-    // Add default skip permissions flag (enabled by default)
-    if config.skip_permissions {
-        cmd.arg("--dangerously-skip-permissions");
-    }
-
-    // Add append system prompt flag
-    if let Some(append_prompt) = &config.append_system_prompt {
-        cmd.arg("--append-system-prompt").arg(append_prompt);
-    }
-
-    // Add max turns flag
-    if let Some(max_turns) = &config.max_turns {
-        cmd.arg("--max-turns").arg(max_turns.to_string());
     }
 
     // Set up stdio for streaming

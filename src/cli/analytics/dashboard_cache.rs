@@ -583,6 +583,7 @@ impl DashboardCache {
     // Private helper methods
 
     async fn cleanup_expired_items(&self) {
+        let now = Utc::now();
         let mut cleaned_count = 0;
         let mut memory_freed = 0;
 

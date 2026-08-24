@@ -38,7 +38,7 @@ impl SqliteStorage {
 
         // Create sessions table if it doesn't exist
         sqlx::query(
-            r"
+            r#"
             CREATE TABLE IF NOT EXISTS sessions (
                 id TEXT PRIMARY KEY NOT NULL,
                 system_prompt TEXT,
@@ -46,7 +46,7 @@ impl SqliteStorage {
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
-            ",
+            "#,
         )
         .execute(&pool)
         .await
@@ -77,14 +77,14 @@ impl SessionStorage for SqliteStorage {
         updated_session.updated_at = chrono::Utc::now();
 
         sqlx::query(
-            r"
+            r#"
             INSERT INTO sessions (id, system_prompt, metadata, created_at, updated_at)
             VALUES (?1, ?2, ?3, ?4, ?5)
             ON CONFLICT(id) DO UPDATE SET
                 system_prompt = excluded.system_prompt,
                 metadata = excluded.metadata,
                 updated_at = excluded.updated_at
-            ",
+            "#,
         )
         .bind(session.id.as_str())
         .bind(&session.system_prompt)
@@ -105,11 +105,11 @@ impl SessionStorage for SqliteStorage {
 
     async fn load(&self, id: &SessionId) -> Result<Option<Session>> {
         let row = sqlx::query(
-            r"
+            r#"
             SELECT id, system_prompt, metadata, created_at, updated_at
             FROM sessions
             WHERE id = ?1
-            ",
+            "#,
         )
         .bind(id.as_str())
         .fetch_optional(&self.pool)
@@ -132,17 +132,17 @@ impl SessionStorage for SqliteStorage {
                 let metadata = serde_json::from_str(&metadata_json)?;
                 let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
                     .map_err(|e| {
-                        Error::SerializationError(serde_json::Error::io(std::io::Error::new(
-                            std::io::ErrorKind::InvalidData,
-                            format!("Invalid created_at timestamp: {}", e),
+                        Error::SerializationError(serde_json::Error::custom(format!(
+                            "Invalid created_at timestamp: {}",
+                            e
                         )))
                     })?
                     .with_timezone(&chrono::Utc);
                 let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at_str)
                     .map_err(|e| {
-                        Error::SerializationError(serde_json::Error::io(std::io::Error::new(
-                            std::io::ErrorKind::InvalidData,
-                            format!("Invalid updated_at timestamp: {}", e),
+                        Error::SerializationError(serde_json::Error::custom(format!(
+                            "Invalid updated_at timestamp: {}",
+                            e
                         )))
                     })?
                     .with_timezone(&chrono::Utc);

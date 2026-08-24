@@ -151,7 +151,11 @@ async fn test_budget_threshold_calculations() {
         (
             75.0,
             75.0,
-            vec!["25% budget utilization", "50% budget utilization", "75% budget utilization"],
+            vec![
+                "25% budget utilization",
+                "50% budget utilization",
+                "75% budget utilization",
+            ],
         ),
         (
             90.0,

@@ -94,7 +94,9 @@ impl CostTestFixture {
         let session_id = Uuid::new_v4();
 
         let mut entries = Vec::new();
-        let commands = ["analyze", "generate", "review", "refactor", "test", "debug", "optimize"];
+        let commands = [
+            "analyze", "generate", "review", "refactor", "test", "debug", "optimize",
+        ];
         let models = ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"];
 
         for i in 0..entry_count {

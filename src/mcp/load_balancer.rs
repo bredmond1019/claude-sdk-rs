@@ -492,8 +492,13 @@ mod tests {
     async fn test_no_available_connections() {
         let balancer = MCPLoadBalancer::new(LoadBalancingStrategy::RoundRobin);
 
-        let connections =
-            vec![create_test_connection("conn1", "server1", HealthStatus::Disconnected, 0, None)];
+        let connections = vec![create_test_connection(
+            "conn1",
+            "server1",
+            HealthStatus::Disconnected,
+            0,
+            None,
+        )];
 
         let selected = balancer
             .select_connection("server1", &connections)
@@ -520,11 +525,23 @@ mod tests {
         let mut available_servers = HashMap::new();
         available_servers.insert(
             "server1".to_string(),
-            vec![create_test_connection("conn1", "server1", HealthStatus::Healthy, 0, None)],
+            vec![create_test_connection(
+                "conn1",
+                "server1",
+                HealthStatus::Healthy,
+                0,
+                None,
+            )],
         );
         available_servers.insert(
             "server2".to_string(),
-            vec![create_test_connection("conn2", "server2", HealthStatus::Healthy, 0, None)],
+            vec![create_test_connection(
+                "conn2",
+                "server2",
+                HealthStatus::Healthy,
+                0,
+                None,
+            )],
         );
 
         // Test affinity selection

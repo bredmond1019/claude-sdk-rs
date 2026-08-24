@@ -133,7 +133,10 @@ impl SimpleAnalyticsEngine {
                 true,
                 1500,
             )],
-            top_commands: vec![("analyze".to_string(), 0.08), ("generate".to_string(), 0.07)],
+            top_commands: vec![
+                ("analyze".to_string(), 0.08),
+                ("generate".to_string(), 0.07),
+            ],
             last_updated: now,
         }
     }

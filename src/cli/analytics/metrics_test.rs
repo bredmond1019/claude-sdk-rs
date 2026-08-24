@@ -575,7 +575,9 @@ pub mod utils {
 
     /// Create standard metric buckets for response times
     pub fn create_response_time_buckets() -> Vec<f64> {
-        vec![10.0, 50.0, 100.0, 250.0, 500.0, 1000.0, 2500.0, 5000.0, 10000.0, 30000.0]
+        vec![
+            10.0, 50.0, 100.0, 250.0, 500.0, 1000.0, 2500.0, 5000.0, 10000.0, 30000.0,
+        ]
     }
 
     /// Create standard metric buckets for costs
@@ -585,7 +587,9 @@ pub mod utils {
 
     /// Create standard metric buckets for token counts
     pub fn create_token_buckets() -> Vec<f64> {
-        vec![100.0, 500.0, 1000.0, 2000.0, 5000.0, 10000.0, 20000.0, 50000.0]
+        vec![
+            100.0, 500.0, 1000.0, 2000.0, 5000.0, 10000.0, 20000.0, 50000.0,
+        ]
     }
 
     /// Calculate statistics for a set of values

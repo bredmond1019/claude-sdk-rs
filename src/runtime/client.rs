@@ -1,66 +1,8 @@
 use crate::core::{
-    validate_query_with_security_level, ClaudeCliResponse, ClaudeResponse, Config, Result, SessionId, StreamFormat,
+    validate_query, ClaudeCliResponse, ClaudeResponse, Config, Result, SessionId, StreamFormat,
 };
 use crate::runtime::{process::execute_claude, stream::MessageStream};
 use std::sync::Arc;
-
-/// Helper function to extract text from an assistant message
-fn extract_text_from_message(msg: &serde_json::Value, result: &mut String) {
-    let Some(message) = msg.get("message") else {
-        return;
-    };
-    
-    let Some(content_array) = message.get("content").and_then(|v| v.as_array()) else {
-        return;
-    };
-    
-    for content_item in content_array {
-        extract_text_from_content_item(content_item, result);
-    }
-}
-
-/// Helper function to extract text from a content item
-fn extract_text_from_content_item(content_item: &serde_json::Value, result: &mut String) {
-    if content_item.get("type").and_then(|v| v.as_str()) != Some("text") {
-        return;
-    }
-    
-    if let Some(text) = content_item.get("text").and_then(|v| v.as_str()) {
-        result.push_str(text);
-    }
-}
-
-/// Parse stream JSON output from Claude CLI
-fn parse_stream_json_output(output: &str) -> Result<ClaudeResponse> {
-    let mut result = String::new();
-    let mut all_json = Vec::new();
-
-    for line in output.lines() {
-        process_stream_json_line(line, &mut all_json, &mut result);
-    }
-
-    // Return the response with all JSON messages as an array
-    let raw_json = serde_json::Value::Array(all_json);
-    Ok(ClaudeResponse::with_json(result, raw_json))
-}
-
-/// Process a single line of stream JSON output
-fn process_stream_json_line(line: &str, all_json: &mut Vec<serde_json::Value>, result: &mut String) {
-    if line.trim().is_empty() {
-        return;
-    }
-    
-    let Ok(msg) = serde_json::from_str::<serde_json::Value>(line) else {
-        return;
-    };
-    
-    all_json.push(msg.clone());
-    
-    // Check if it's an assistant message and extract text
-    if msg.get("type").and_then(|v| v.as_str()) == Some("assistant") {
-        extract_text_from_message(&msg, result);
-    }
-}
 
 /// High-level client for interacting with Claude Code CLI
 ///
@@ -155,7 +97,7 @@ impl Client {
     /// # }
     /// ```
     pub async fn send(&self, query: &str) -> Result<String> {
-        validate_query_with_security_level(query, self.config.security_level)?;
+        validate_query(query)?;
         let response = self.send_full(query).await?;
         Ok(response.content)
     }
@@ -194,7 +136,7 @@ impl Client {
     /// # }
     /// ```
     pub async fn send_full(&self, query: &str) -> Result<ClaudeResponse> {
-        validate_query_with_security_level(query, self.config.security_level)?;
+        validate_query(query)?;
         let output = execute_claude(&self.config, query).await?;
 
         // Parse response based on format
@@ -211,7 +153,45 @@ impl Client {
                 ))
             }
             StreamFormat::StreamJson => {
-                parse_stream_json_output(&output)
+                // For stream-json, we need to parse multiple JSON lines
+                let mut result = String::new();
+                let mut all_json = Vec::new();
+
+                for line in output.lines() {
+                    if line.trim().is_empty() {
+                        continue;
+                    }
+                    // Try to parse as a message
+                    if let Ok(msg) = serde_json::from_str::<serde_json::Value>(line) {
+                        all_json.push(msg.clone());
+
+                        // Check if it's an assistant message
+                        if msg.get("type").and_then(|v| v.as_str()) == Some("assistant") {
+                            // Extract text from the message content
+                            if let Some(message) = msg.get("message") {
+                                if let Some(content_array) =
+                                    message.get("content").and_then(|v| v.as_array())
+                                {
+                                    for content_item in content_array {
+                                        if content_item.get("type").and_then(|v| v.as_str())
+                                            == Some("text")
+                                        {
+                                            if let Some(text) =
+                                                content_item.get("text").and_then(|v| v.as_str())
+                                            {
+                                                result.push_str(text);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Return the response with all JSON messages as an array
+                let raw_json = serde_json::Value::Array(all_json);
+                Ok(ClaudeResponse::with_json(result, raw_json))
             }
         }
     }
@@ -350,132 +330,6 @@ impl ClientBuilder {
     /// ```
     pub fn timeout_secs(mut self, timeout_secs: u64) -> Self {
         self.config.timeout_secs = Some(timeout_secs);
-        self
-    }
-
-    /// Enable session continuation (--continue flag)
-    ///
-    /// When enabled, the client will use the --continue flag to resume
-    /// the most recent conversation session.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
-    /// let client = Client::builder()
-    ///     .continue_session()
-    ///     .build();
-    /// ```
-    pub fn continue_session(mut self) -> Self {
-        self.config.continue_session = true;
-        self
-    }
-
-    /// Resume a specific session by ID (--resume flag)
-    ///
-    /// When set, the client will use the --resume flag with the specified
-    /// session ID to continue a specific conversation session.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
-    /// let client = Client::builder()
-    ///     .resume_session("session_123")
-    ///     .build();
-    /// ```
-    pub fn resume_session(mut self, session_id: impl Into<String>) -> Self {
-        self.config.resume_session_id = Some(session_id.into());
-        self
-    }
-
-    /// Set the list of disallowed tools
-    ///
-    /// Controls which tools Claude cannot access during execution.
-    /// Provides fine-grained control over tool restrictions.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
-    /// let client = Client::builder()
-    ///     .disallowed_tools(vec!["bash".to_string(), "filesystem".to_string()])
-    ///     .build();
-    /// ```
-    pub fn disallowed_tools(mut self, tools: Vec<String>) -> Self {
-        self.config.disallowed_tools = Some(tools);
-        self
-    }
-
-    /// Set whether to skip permission prompts (default: true)
-    ///
-    /// When `true` (default), adds the `--dangerously-skip-permissions` flag
-    /// to bypass tool permission prompts. Set to `false` for additional security.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
-    /// let client = Client::builder()
-    ///     .skip_permissions(false)  // Require permission prompts
-    ///     .build();
-    /// ```
-    pub fn skip_permissions(mut self, skip: bool) -> Self {
-        self.config.skip_permissions = skip;
-        self
-    }
-
-    /// Set an additional system prompt to append
-    ///
-    /// When set, adds the `--append-system-prompt` flag to extend the
-    /// existing system prompt. Cannot be used with `system_prompt`.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
-    /// let client = Client::builder()
-    ///     .append_system_prompt("Additionally, be concise in your responses.")
-    ///     .build();
-    /// ```
-    pub fn append_system_prompt(mut self, prompt: impl Into<String>) -> Self {
-        self.config.append_system_prompt = Some(prompt.into());
-        self
-    }
-
-    /// Set the maximum number of conversation turns
-    ///
-    /// Limits the conversation to the specified number of back-and-forth
-    /// exchanges. Useful for controlling conversation length.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
-    /// let client = Client::builder()
-    ///     .max_turns(10)
-    ///     .build();
-    /// ```
-    pub fn max_turns(mut self, turns: u32) -> Self {
-        self.config.max_turns = Some(turns);
-        self
-    }
-
-    /// Set the security validation level
-    ///
-    /// Controls how strictly user input is validated for potential security threats.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,no_run
-    /// # use claude_sdk_rs_runtime::Client;
-    /// # use crate::core::SecurityLevel;
-    /// let client = Client::builder()
-    ///     .security_level(SecurityLevel::Relaxed)  // Allow more flexible input
-    ///     .build();
-    /// ```
-    pub fn security_level(mut self, level: crate::core::SecurityLevel) -> Self {
-        self.config.security_level = level;
         self
     }
 

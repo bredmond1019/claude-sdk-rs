@@ -3,25 +3,19 @@
 //! This module provides integration between MCP connection pooling and the
 //! existing Prometheus metrics system for comprehensive monitoring.
 
-#[cfg(feature = "mcp")]
-use crate::mcp::connection_pool::{DetailedHealthInfo, MCPConnectionPool};
-#[cfg(feature = "mcp")]
+#[cfg(feature = "metrics")]
 use prometheus::{Gauge, Histogram, HistogramOpts, IntCounter, IntGauge, Opts, Registry};
-#[cfg(feature = "mcp")]
+
 use std::collections::HashMap;
-#[cfg(feature = "mcp")]
 use std::sync::Arc;
-#[cfg(feature = "mcp")]
 use tokio::sync::RwLock;
-#[cfg(feature = "mcp")]
 use tokio::time::{interval, Duration};
 
-#[cfg(not(feature = "mcp"))]
-use crate::mcp::connection_pool::MCPConnectionPool;
+use crate::mcp::connection_pool::{DetailedHealthInfo, MCPConnectionPool};
 use crate::mcp::core::error::circuit_breaker::CircuitState;
 use crate::mcp::core::error::WorkflowError;
 
-#[cfg(feature = "mcp")]
+#[cfg(feature = "metrics")]
 /// MCP-specific metrics collector
 pub struct MCPMetrics {
     // Connection metrics
@@ -52,7 +46,7 @@ pub struct MCPMetrics {
     pub server_metrics: Arc<RwLock<HashMap<String, ServerMetrics>>>,
 }
 
-#[cfg(feature = "mcp")]
+#[cfg(feature = "metrics")]
 struct ServerMetrics {
     requests: IntCounter,
     errors: IntCounter,
@@ -60,7 +54,7 @@ struct ServerMetrics {
     health_score: Gauge,
 }
 
-#[cfg(feature = "mcp")]
+#[cfg(feature = "metrics")]
 impl MCPMetrics {
     pub fn new(registry: &Registry) -> Result<Self, prometheus::Error> {
         let active_connections = IntGauge::with_opts(Opts::new(
@@ -252,11 +246,11 @@ impl MCPMetrics {
     }
 }
 
-#[cfg(not(feature = "mcp"))]
+#[cfg(not(feature = "metrics"))]
 /// Stub implementation when metrics feature is disabled
 pub struct MCPMetrics;
 
-#[cfg(not(feature = "mcp"))]
+#[cfg(not(feature = "metrics"))]
 impl MCPMetrics {
     pub fn new(_registry: &()) -> Result<Self, WorkflowError> {
         Ok(Self)

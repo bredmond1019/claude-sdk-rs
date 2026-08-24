@@ -1224,7 +1224,12 @@ mod tests {
             let generator = ReportTestDataGenerator::new();
 
             // Test performance with different data volumes
-            let test_cases = [("small", 1), ("medium", 7), ("large", 30), ("high_volume", 100)];
+            let test_cases = [
+                ("small", 1),
+                ("medium", 7),
+                ("large", 30),
+                ("high_volume", 100),
+            ];
 
             for (name, days) in test_cases {
                 let data = generator.generate_period_data(days);

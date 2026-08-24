@@ -23,8 +23,14 @@ impl Node for FilterSpamQueryNode {
             })?;
 
         // Simple spam detection using common spam indicators
-        let spam_indicators =
-            ["viagra", "lottery", "winner", "congratulations", "click here", "free money"];
+        let spam_indicators = [
+            "viagra",
+            "lottery",
+            "winner",
+            "congratulations",
+            "click here",
+            "free money",
+        ];
         let is_spam = spam_indicators
             .iter()
             .any(|&indicator| event_data.user_query.to_lowercase().contains(indicator));

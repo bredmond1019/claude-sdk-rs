@@ -474,7 +474,6 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[ignore] // TODO: Fix deadlock in error telemetry - temporarily disabled to unblock CI
     async fn test_error_telemetry() {
         let config = TelemetryConfig::default();
         let telemetry = ErrorTelemetry::new(config);
@@ -521,64 +520,44 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix deadlock in error rate calculation - temporarily disabled to unblock CI
     async fn test_error_rate_calculation() {
-        use tokio::time::{timeout, Duration};
-
-        let test_future = async {
-            let config = TelemetryConfig {
-                error_rate_threshold: 5.0,
-                ..Default::default()
-            };
-            let telemetry = ErrorTelemetry::new(config);
-
-            // Generate errors to trigger alert
-            for i in 0..10 {
-                let mut context = HashMap::new();
-                context.insert("iteration".to_string(), i.to_string());
-
-                telemetry
-                    .record_error(
-                        &Error::ProcessError("test error".to_string()),
-                        "rapid_errors",
-                        context,
-                    )
-                    .await;
-            }
-
-            let stats = telemetry.get_statistics().await;
-            assert!(stats.error_rate >= 10.0);
+        let config = TelemetryConfig {
+            error_rate_threshold: 5.0,
+            ..Default::default()
         };
+        let telemetry = ErrorTelemetry::new(config);
 
-        // Add timeout to prevent hanging
-        timeout(Duration::from_secs(5), test_future)
-            .await
-            .expect("Test should complete within 5 seconds");
+        // Generate errors to trigger alert
+        for i in 0..10 {
+            let mut context = HashMap::new();
+            context.insert("iteration".to_string(), i.to_string());
+
+            telemetry
+                .record_error(
+                    &Error::ProcessError("test error".to_string()),
+                    "rapid_errors",
+                    context,
+                )
+                .await;
+        }
+
+        let stats = telemetry.get_statistics().await;
+        assert!(stats.error_rate >= 10.0);
     }
 
     #[tokio::test]
-    #[ignore] // TODO: Fix deadlock in prometheus export - temporarily disabled to unblock CI
     async fn test_prometheus_export() {
-        use tokio::time::{timeout, Duration};
+        let telemetry = ErrorTelemetry::new(TelemetryConfig::default());
 
-        let test_future = async {
-            let telemetry = ErrorTelemetry::new(TelemetryConfig::default());
+        // Record some data
+        telemetry
+            .record_error(&Error::Timeout(30), "test", HashMap::new())
+            .await;
 
-            // Record some data
-            telemetry
-                .record_error(&Error::Timeout(30), "test", HashMap::new())
-                .await;
-
-            let metrics = telemetry.export_prometheus_metrics().await;
-            assert!(metrics.contains("claude_errors_total"));
-            assert!(metrics.contains("code=\"C007\""));
-            assert!(metrics.contains("claude_error_rate_per_minute"));
-            assert!(metrics.contains("claude_uptime_seconds"));
-        };
-
-        // Add timeout to prevent hanging
-        timeout(Duration::from_secs(5), test_future)
-            .await
-            .expect("Test should complete within 5 seconds");
+        let metrics = telemetry.export_prometheus_metrics().await;
+        assert!(metrics.contains("claude_errors_total"));
+        assert!(metrics.contains("code=\"C007\""));
+        assert!(metrics.contains("claude_error_rate_per_minute"));
+        assert!(metrics.contains("claude_uptime_seconds"));
     }
 }

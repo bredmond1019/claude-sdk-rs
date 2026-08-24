@@ -87,8 +87,15 @@ impl TicketRouterNode {
     }
 
     fn validate_department(&self, department: &str) -> Result<String, WorkflowError> {
-        let valid_departments =
-            ["billing", "technical", "tech", "general", "complaint", "sales", "support"];
+        let valid_departments = [
+            "billing",
+            "technical",
+            "tech",
+            "general",
+            "complaint",
+            "sales",
+            "support",
+        ];
 
         let dept_lower = department.to_lowercase();
         if valid_departments.contains(&dept_lower.as_str()) {

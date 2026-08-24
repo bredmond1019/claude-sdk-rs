@@ -694,11 +694,11 @@ impl MCPConnectionPool {
             let circuit_state = if let Some(breaker) = circuit_breaker {
                 breaker.read().await.state()
             } else {
-                crate::mcp::core::error::circuit_breaker::CircuitState::Closed
+                crate::core::error::circuit_breaker::CircuitState::Closed
             };
 
             let is_healthy = healthy_count > 0
-                && circuit_state != crate::mcp::core::error::circuit_breaker::CircuitState::Open;
+                && circuit_state != crate::core::error::circuit_breaker::CircuitState::Open;
 
             results.insert(server_id.clone(), is_healthy);
         }
@@ -803,7 +803,7 @@ impl MCPConnectionPool {
             let circuit_state = if let Some(breaker) = circuit_breaker {
                 breaker.read().await.state()
             } else {
-                crate::mcp::core::error::circuit_breaker::CircuitState::Closed
+                crate::core::error::circuit_breaker::CircuitState::Closed
             };
 
             let mut healthy_count = 0;
@@ -925,12 +925,11 @@ impl MCPConnectionPool {
                     let circuit_state = if let Some(breaker) = circuit_breaker {
                         breaker.read().await.state()
                     } else {
-                        crate::mcp::core::error::circuit_breaker::CircuitState::Closed
+                        crate::core::error::circuit_breaker::CircuitState::Closed
                     };
 
                     // Only attempt reconnection if circuit is not open
-                    if circuit_state != crate::mcp::core::error::circuit_breaker::CircuitState::Open
-                    {
+                    if circuit_state != crate::core::error::circuit_breaker::CircuitState::Open {
                         let connections_guard = connections.read().await;
                         if let Some(pool) = connections_guard.get(server_id) {
                             let mut healthy_count = 0;
@@ -1152,7 +1151,7 @@ pub struct PoolStats {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerHealthInfo {
     pub pool_stats: PoolStats,
-    pub circuit_state: crate::mcp::core::error::circuit_breaker::CircuitState,
+    pub circuit_state: crate::core::error::circuit_breaker::CircuitState,
     // pub circuit_metrics: crate::core::error::circuit_breaker::CircuitBreakerMetrics,
 }
 
@@ -1160,7 +1159,7 @@ pub struct ServerHealthInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DetailedHealthInfo {
     pub server_health: HashMap<String, ServerHealthInfo>,
-    pub overall_summary: crate::mcp::health::HealthSummary,
+    pub overall_summary: crate::health::HealthSummary,
 }
 
 #[cfg(test)]

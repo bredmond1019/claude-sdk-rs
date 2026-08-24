@@ -434,20 +434,15 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[ignore] // TODO: Fix closure capture issue - temporarily disabled to unblock CI
     async fn test_stream_reconnection_manager() {
         let manager = StreamReconnectionManager::new(3, Duration::from_millis(100));
 
-        use std::sync::atomic::{AtomicUsize, Ordering};
-        use std::sync::Arc;
-
-        let attempt_count = Arc::new(AtomicUsize::new(0));
+        let mut attempt_count = 0;
         let result = manager
             .reconnect(|| {
-                let count = Arc::clone(&attempt_count);
+                attempt_count += 1;
                 async move {
-                    let current = count.fetch_add(1, Ordering::SeqCst) + 1;
-                    if current < 3 {
+                    if attempt_count < 3 {
                         Err(Error::StreamClosed)
                     } else {
                         Ok("success")
@@ -461,8 +456,7 @@ mod tests {
 
         let health = manager.health_status().await;
         assert_eq!(health.total_connections, 3);
-        // Allow for floating point precision differences
-        assert!((health.success_rate - 33.33333333333333).abs() < 0.01);
+        assert_eq!(health.success_rate, 33.33333333333333);
     }
 
     #[tokio::test]
