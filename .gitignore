@@ -1,3 +1,4 @@
 /target
 .claude
 misc/
+.DS_Store
